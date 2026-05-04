@@ -271,6 +271,50 @@
   /* FORCE FIRST PASSWORD CHANGE */
   #force-pw-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:16px; background:var(--bg); }
 
+  /* RISK ENGINE */
+  .risk-badge { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; }
+  .risk-green  { background:rgba(16,185,129,.15); color:#10b981; border:1px solid rgba(16,185,129,.3); }
+  .risk-yellow { background:rgba(245,158,11,.15);  color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
+  .risk-orange { background:rgba(249,115,22,.15);  color:#fb923c; border:1px solid rgba(249,115,22,.3); }
+  .risk-red    { background:rgba(239,68,68,.15);   color:#ef4444; border:1px solid rgba(239,68,68,.3); }
+  .risk-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .risk-dot-green  { background:#10b981; }
+  .risk-dot-yellow { background:#f59e0b; animation:blink-rec 2s infinite; }
+  .risk-dot-orange { background:#fb923c; animation:blink-rec 1.5s infinite; }
+  .risk-dot-red    { background:#ef4444; animation:blink-rec 1s infinite; }
+
+  /* CRISIS BOARD */
+  .crisis-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:14px; border-left:3px solid var(--border); transition:border-color .2s; }
+  .crisis-card.red    { border-left-color:#ef4444; background:rgba(239,68,68,.04); }
+  .crisis-card.orange { border-left-color:#fb923c; background:rgba(249,115,22,.04); }
+  .crisis-card.yellow { border-left-color:#f59e0b; background:rgba(245,158,11,.04); }
+  .crisis-action-box { background:rgba(14,165,233,.06); border:1px solid rgba(14,165,233,.18); border-radius:10px; padding:14px 16px; margin-top:10px; }
+
+  /* TIMELINE */
+  .timeline-wrap { position:relative; padding-left:24px; }
+  .timeline-wrap::before { content:''; position:absolute; left:8px; top:0; bottom:0; width:2px; background:var(--border2); }
+  .timeline-item { position:relative; margin-bottom:20px; }
+  .timeline-dot { position:absolute; left:-20px; top:4px; width:12px; height:12px; border-radius:50%; border:2px solid var(--bg); flex-shrink:0; }
+  .timeline-content { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px 16px; }
+  .timeline-date { font-size:11px; color:var(--text3); margin-bottom:4px; }
+  .timeline-title { font-size:14px; font-weight:600; margin-bottom:4px; }
+  .timeline-body  { font-size:13px; color:var(--text2); line-height:1.5; }
+
+  /* PROMPT LIBRARY */
+  .prompt-card { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:10px; cursor:pointer; transition:border-color .2s; }
+  .prompt-card:hover { border-color:var(--accent); }
+  .prompt-tag { display:inline-flex; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; margin-right:4px; }
+  .prompt-tag-cob { background:rgba(239,68,68,.15); color:#ef4444; }
+  .prompt-tag-pro { background:rgba(99,102,241,.15); color:#818cf8; }
+  .prompt-tag-con { background:rgba(245,158,11,.15); color:#f59e0b; }
+  .prompt-tag-exp { background:rgba(16,185,129,.15); color:#10b981; }
+
+  /* MATURITY LEVELS */
+  .maturity-d1 { background:rgba(239,68,68,.1); color:#ef4444; border:1px solid rgba(239,68,68,.3); }
+  .maturity-d2 { background:rgba(245,158,11,.1); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
+  .maturity-d3 { background:rgba(14,165,233,.1); color:#38bdf8; border:1px solid rgba(14,165,233,.3); }
+  .maturity-d4 { background:rgba(16,185,129,.1); color:#10b981; border:1px solid rgba(16,185,129,.3); }
+
   /* META.X BRAND ELEMENTS */
   .metax-badge { display:inline-flex; align-items:center; gap:6px; background:rgba(14,165,233,.08); border:1px solid rgba(14,165,233,.2); border-radius:6px; padding:3px 10px; font-size:11px; color:var(--accent2); font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
   .data-grid { display:grid; gap:1px; background:var(--border); border-radius:10px; overflow:hidden; }
@@ -409,6 +453,13 @@
       <div class="nav-item" onclick="showPage('ceo')" id="nav-ceo" style="display:none">
         <span class="icon">◆</span> <span style="background:var(--grad1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700">CEO Digital</span>
       </div>
+      <div class="nav-item" onclick="showPage('crisis')" id="nav-crisis" style="display:none">
+        <span class="icon">🔴</span> Crisis Board
+        <span id="crisis-badge" style="margin-left:auto;background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;display:none">0</span>
+      </div>
+      <div class="nav-item" onclick="showPage('timeline')" id="nav-timeline" style="display:none">
+        <span class="icon">◷</span> Timelines
+      </div>
       <!-- ADMIN -->
       <div class="nav-section" id="nav-sec-admin" style="display:none">Admin</div>
       <div class="nav-item" onclick="showPage('reports')" id="nav-reports" style="display:none">
@@ -540,6 +591,16 @@
     <!-- CEO DIGITAL PAGE -->
     <div class="page" id="page-ceo">
       <div id="ceo-content"></div>
+    </div>
+
+    <!-- CEO CRISIS BOARD -->
+    <div class="page" id="page-crisis">
+      <div id="crisis-content"></div>
+    </div>
+
+    <!-- TIMELINE PAGE -->
+    <div class="page" id="page-timeline">
+      <div id="timeline-content"></div>
     </div>
   </div>
 </div>
@@ -1034,7 +1095,7 @@ function startApp() {
   if (currentUser.isAdmin) {
     // Admin sees: leaders, alerts, new1on1, reports, admin, ceo — NOT my1on1/profile
     ['nav-leaders','nav-alerts','nav-reports','nav-admin','nav-sec-admin',
-     'nav-ceo','nav-sec-ceo','nav-new1on1'].forEach(id => {
+     'nav-ceo','nav-sec-ceo','nav-new1on1','nav-crisis','nav-timeline'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = '';
     });
     ['nav-my1on1','nav-profile','nav-sec-profile'].forEach(id => {
@@ -1048,7 +1109,7 @@ function startApp() {
       const el = document.getElementById(id); if (el) el.style.display = '';
     });
     ['nav-leaders','nav-reports','nav-admin','nav-sec-admin',
-     'nav-ceo','nav-sec-ceo'].forEach(id => {
+     'nav-ceo','nav-sec-ceo','nav-crisis','nav-timeline'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
     const leaderData = store.leaders.find(l => l.id === currentUser.id);
@@ -1085,11 +1146,13 @@ function showPage(page) {
     dashboard: 'Dashboard', leaders: 'Líderes', my1on1: 'Meus 1:1s',
     new1on1: 'Novo 1:1', history: 'Histórico', alerts: 'Alertas',
     reports: 'Relatórios', admin: 'Administração', ceo: 'CEO Digital',
-    profile: 'Meu Perfil'
+    profile: 'Meu Perfil', crisis: '🔴 Crisis Board', timeline: 'Timelines de Líderes'
   };
   document.getElementById('topbar-title').textContent = titles[page] || page;
 
   if (page === 'dashboard') { if (currentUser.isAdmin) renderAdminDashboard(); else renderLeaderDashboard(); }
+  if (page === 'crisis') renderCrisisBoard();
+  if (page === 'timeline') renderTimelinesPage();
   if (page === 'leaders') renderLeaders();
   if (page === 'alerts') { renderAlerts(); markAlertsRead(); updateAlertsBadge(); }
   if (page === 'reports') renderReports();
@@ -3248,6 +3311,629 @@ function changeProfilePassword() {
   document.getElementById('pw-current').value = '';
   document.getElementById('pw-new').value = '';
   document.getElementById('pw-confirm').value = '';
+}
+
+// ============================================================
+// RISK ENGINE — Motor de Risco Dinâmico (15.1)
+// ============================================================
+function calcRiskScore(leader) {
+  let score = 0;
+  const signals = [];
+  const now = Date.now();
+  const sessions = store.sessions.filter(s => s.leaderId === leader.id).sort((a,b) => new Date(b.dateISO)-new Date(a.dateISO));
+  const actions = store.actionItems.filter(a => a.leaderId === leader.id);
+  const pending = actions.filter(a => a.status === 'pending');
+  const done    = actions.filter(a => a.status === 'done');
+  const total   = pending.length + done.length;
+
+  // Dias desde último 1:1
+  const lastSession = sessions[0];
+  const daysSince = lastSession ? Math.floor((now - new Date(lastSession.dateISO)) / 86400000) : 999;
+  if (daysSince > 21) { score += 3; signals.push(`Sem 1:1 há ${daysSince} dias`); }
+  else if (daysSince > 14) { score += 2; signals.push(`Sem 1:1 há ${daysSince} dias`); }
+  else if (daysSince > 7)  { score += 1; signals.push(`Último 1:1 há ${daysSince} dias`); }
+
+  // Percentual de planos vencidos
+  const execPct = total > 0 ? Math.round((done.length / total) * 100) : 0;
+  if (execPct < 30 && total > 0) { score += 3; signals.push(`Execução crítica: ${execPct}%`); }
+  else if (execPct < 60 && total > 0) { score += 1; signals.push(`Execução baixa: ${execPct}%`); }
+
+  // Planos vencidos sem justificativa
+  if (pending.length >= 4) { score += 2; signals.push(`${pending.length} planos pendentes`); }
+  else if (pending.length >= 2) { score += 1; signals.push(`${pending.length} planos pendentes`); }
+
+  // Sem anamnese
+  if (!leader.anamneseDone) { score += 2; signals.push('Sem anamnese'); }
+
+  // Alertas críticos anteriores
+  const critAlerts = store.alerts.filter(a => a.leaderId === leader.id && (a.level === 'critical' || a.level === 'alto')).length;
+  if (critAlerts >= 3) { score += 2; signals.push(`${critAlerts} alertas críticos anteriores`); }
+  else if (critAlerts >= 1) { score += 1; }
+
+  // Maturidade em queda (comparar últimas 2 sessões — verificar padrão de risco/blockers)
+  if (sessions.length >= 2) {
+    const recRisk = sessions.slice(0,3).filter(s => s.data?.risks?.length > 30).length;
+    if (recRisk >= 2) { score += 2; signals.push('Riscos recorrentes em múltiplas sessões'); }
+    const recAvoided = sessions.slice(0,3).filter(s => s.data?.avoided?.length > 10).length;
+    if (recAvoided >= 2) { score += 1; signals.push('Padrão de evitar conversas difíceis'); }
+  }
+
+  // Comprometimento vs execução (discurso vs prática)
+  if (sessions.length >= 2) {
+    const withCommitment = sessions.filter(s => s.data?.commitment?.length > 10).length;
+    if (withCommitment >= 2 && execPct < 50) { score += 2; signals.push('Incoerência: alto comprometimento, baixa execução'); }
+  }
+
+  // Classificação final
+  let level, label, color, cssClass, trend;
+  if (score >= 10)     { level = 'critical'; label = 'Crise Iminente'; color = '#ef4444'; cssClass = 'risk-red'; }
+  else if (score >= 6) { level = 'alto';     label = 'Alto Risco';     color = '#fb923c'; cssClass = 'risk-orange'; }
+  else if (score >= 3) { level = 'medio';    label = 'Atenção';        color = '#f59e0b'; cssClass = 'risk-yellow'; }
+  else                 { level = 'baixo';    label = 'Saudável';       color = '#10b981'; cssClass = 'risk-green'; }
+
+  // Tendência (comparar score atual vs 30 dias atrás — simplificado)
+  const prevSessions = sessions.filter(s => new Date(s.dateISO) < new Date(now - 30*86400000));
+  const prevPending = store.actionItems.filter(a => a.leaderId === leader.id && a.status === 'pending' && new Date(a.createdAt) < new Date(now - 30*86400000)).length;
+  if (prevPending < pending.length) trend = 'deteriorando';
+  else if (prevPending > pending.length) trend = 'melhorando';
+  else trend = 'estável';
+
+  return { score, level, label, color, cssClass, signals, daysSince, execPct, trend };
+}
+
+function getRiskHtml(risk) {
+  const dotClass = risk.cssClass.replace('risk-','risk-dot-');
+  return `<span class="risk-badge ${risk.cssClass}"><span class="risk-dot ${dotClass}"></span>${risk.label}</span>`;
+}
+
+function updateCrisisBadge() {
+  const badge = document.getElementById('crisis-badge');
+  if (!badge) return;
+  const critical = store.leaders.filter(l => {
+    const r = calcRiskScore(l);
+    return r.level === 'critical' || r.level === 'alto';
+  }).length;
+  badge.textContent = critical;
+  badge.style.display = critical > 0 ? '' : 'none';
+}
+
+// ============================================================
+// CEO CRISIS BOARD (15.3)
+// ============================================================
+function renderCrisisBoard() {
+  const el = document.getElementById('crisis-content');
+  if (!el) return;
+
+  const now = new Date();
+  const leaders = store.leaders;
+
+  // Calcular riscos para todos
+  const riskData = leaders.map(l => ({ leader: l, risk: calcRiskScore(l) }))
+    .sort((a,b) => b.risk.score - a.risk.score);
+
+  const critical = riskData.filter(x => x.risk.level === 'critical' || x.risk.level === 'alto');
+  const attention = riskData.filter(x => x.risk.level === 'medio');
+  const healthy  = riskData.filter(x => x.risk.level === 'baixo');
+
+  // Ações prioritárias do CEO (geradas por IA)
+  const ceoActions = generateCeoActions(riskData);
+
+  // Líderes sem 1:1 há +14 dias
+  const silent = riskData.filter(x => x.risk.daysSince > 14);
+  // Planos críticos vencidos
+  const overdueActions = store.actionItems.filter(a => a.status === 'pending');
+
+  el.innerHTML = `
+    <!-- Header Crisis -->
+    <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:20px 24px;margin-bottom:24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div style="flex:1">
+        <div style="font-size:20px;font-weight:800;color:#ef4444;margin-bottom:4px">🔴 Crisis Board — CEO</div>
+        <div style="font-size:13px;color:var(--text2)">Central de exceção e intervenção prioritária · ${now.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})}</div>
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <div style="text-align:center"><div style="font-size:26px;font-weight:800;color:#ef4444">${critical.length}</div><div style="font-size:11px;color:var(--text3)">Em Crise</div></div>
+        <div style="text-align:center"><div style="font-size:26px;font-weight:800;color:#f59e0b">${attention.length}</div><div style="font-size:11px;color:var(--text3)">Atenção</div></div>
+        <div style="text-align:center"><div style="font-size:26px;font-weight:800;color:#10b981">${healthy.length}</div><div style="font-size:11px;color:var(--text3)">Saudáveis</div></div>
+        <div style="text-align:center"><div style="font-size:26px;font-weight:800;color:var(--accent2)">${overdueActions.length}</div><div style="font-size:11px;color:var(--text3)">Planos Abertos</div></div>
+      </div>
+    </div>
+
+    <!-- Ações Prioritárias do CEO Hoje -->
+    <div class="card mb-20" style="border-color:rgba(14,165,233,.3)">
+      <div class="card-title" style="color:var(--accent2)">⚡ Ações Prioritárias do CEO Hoje</div>
+      <div style="display:grid;gap:12px">
+        ${ceoActions.map((a,i) => `
+          <div class="crisis-action-box">
+            <div style="display:flex;align-items:flex-start;gap:12px">
+              <div style="font-size:20px;flex-shrink:0">${a.icon}</div>
+              <div style="flex:1">
+                <div class="fw-700" style="font-size:14px;margin-bottom:4px">${a.who}</div>
+                <div class="text-sm text-muted mb-8">${a.situation}</div>
+                <div style="background:rgba(14,165,233,.08);border-radius:8px;padding:10px 12px;font-size:13px;font-style:italic;color:var(--text2);margin-bottom:8px">
+                  💬 <strong>Pergunta sugerida:</strong> "${a.question}"
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  <span style="font-size:12px;color:var(--warning)">⚠ ${a.risk}</span>
+                  <span style="font-size:12px;color:var(--accent2)">📅 Prazo sugerido: ${a.deadline}</span>
+                </div>
+              </div>
+              <button class="btn btn-primary btn-sm" style="flex-shrink:0" onclick="startNew1on1FromAdmin('${a.leaderId}')">▶ 1:1 Agora</button>
+            </div>
+          </div>`).join('')}
+        ${!ceoActions.length ? '<p class="text-sm text-muted">Nenhuma intervenção crítica necessária no momento. Continue monitorando.</p>' : ''}
+      </div>
+    </div>
+
+    <div class="grid-2" style="gap:20px">
+      <!-- Líderes em crise / atenção -->
+      <div>
+        <div class="card-title mb-16">🔴 Score de Risco por Líder</div>
+        ${riskData.map(x => `
+          <div class="crisis-card ${x.risk.level === 'critical' ? 'red' : x.risk.level === 'alto' ? 'orange' : x.risk.level === 'medio' ? 'yellow' : ''}">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+              <div style="width:36px;height:36px;border-radius:50%;background:${x.leader.color||'#6366f1'};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0">${x.leader.name[0]}</div>
+              <div style="flex:1">
+                <div class="fw-700">${x.leader.name}</div>
+                <div class="text-xs text-muted">${x.leader.area}</div>
+              </div>
+              ${getRiskHtml(x.risk)}
+              <div style="font-size:20px;font-weight:800;color:${x.risk.color}">${x.risk.score}</div>
+            </div>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px">
+              <span class="text-xs text-muted">Último 1:1: <strong style="color:var(--text)">${x.risk.daysSince === 999 ? 'Nunca' : x.risk.daysSince+'d atrás'}</strong></span>
+              <span class="text-xs text-muted">Execução: <strong style="color:${x.risk.execPct>=60?'#10b981':'#ef4444'}">${x.risk.execPct}%</strong></span>
+              <span class="text-xs text-muted">Tendência: <strong style="color:${x.risk.trend==='melhorando'?'#10b981':x.risk.trend==='deteriorando'?'#ef4444':'#f59e0b'}">${x.risk.trend}</strong></span>
+            </div>
+            ${x.risk.signals.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap">${x.risk.signals.map(s=>`<span style="font-size:11px;background:rgba(0,0,0,.2);border-radius:6px;padding:2px 8px;color:var(--text2)">${s}</span>`).join('')}</div>` : ''}
+            <div style="margin-top:10px;display:flex;gap:8px">
+              <button class="btn btn-secondary btn-sm" onclick="startNew1on1FromAdmin('${x.leader.id}')">▶ 1:1</button>
+              <button class="btn btn-secondary btn-sm" onclick="showPage('timeline');renderLeaderTimeline('${x.leader.id}')">◷ Timeline</button>
+            </div>
+          </div>`).join('')}
+      </div>
+
+      <!-- Painel direito: silenciosos + planos vencidos -->
+      <div>
+        <div class="card mb-16">
+          <div class="card-title">🔇 Líderes Silenciosos (+14 dias)</div>
+          ${!silent.length ? '<p class="text-sm text-muted">Todos os líderes tiveram 1:1 recente.</p>' :
+            silent.map(x => `
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div style="width:28px;height:28px;border-radius:50%;background:${x.leader.color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">${x.leader.name[0]}</div>
+                  <div>
+                    <div class="fw-600 text-sm">${x.leader.name}</div>
+                    <div class="text-xs text-muted">${x.risk.daysSince === 999 ? 'Nunca fez 1:1' : x.risk.daysSince + ' dias sem 1:1'}</div>
+                  </div>
+                </div>
+                <button class="btn btn-secondary btn-xs" onclick="startNew1on1FromAdmin('${x.leader.id}')">▶</button>
+              </div>`).join('')}
+        </div>
+
+        <div class="card mb-16">
+          <div class="card-title">📋 Planos em Aberto</div>
+          <div style="max-height:280px;overflow-y:auto">
+            ${!overdueActions.length ? '<p class="text-sm text-muted">Nenhum plano pendente.</p>' :
+              overdueActions.slice(0,8).map(a => {
+                const l = store.leaders.find(x => x.id === a.leaderId);
+                return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+                  <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                    <span class="text-xs text-muted">${l?.name||'?'}</span>
+                    <span class="badge ${a.priority==='Alta'?'badge-red':a.priority==='Média'?'badge-yellow':'badge-blue'} " style="font-size:10px">${a.priority}</span>
+                  </div>
+                  <div class="text-sm fw-600">${a.action.substring(0,70)}</div>
+                  <div class="text-xs text-muted">Prazo: ${a.deadline||'—'}</div>
+                </div>`;
+              }).join('')}
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📊 Distribuição de Risco</div>
+          <div style="display:grid;gap:8px">
+            ${[['Crise Iminente','#ef4444',riskData.filter(x=>x.risk.level==='critical').length],
+               ['Alto Risco','#fb923c',riskData.filter(x=>x.risk.level==='alto').length],
+               ['Atenção','#f59e0b',riskData.filter(x=>x.risk.level==='medio').length],
+               ['Saudável','#10b981',riskData.filter(x=>x.risk.level==='baixo').length]]
+              .map(([label,color,count]) => `
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div style="width:12px;height:12px;border-radius:50%;background:${color};flex-shrink:0"></div>
+                  <div style="flex:1;font-size:13px">${label}</div>
+                  <div style="font-weight:700;color:${color}">${count}</div>
+                  <div style="width:80px;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+                    <div style="height:100%;background:${color};width:${leaders.length ? Math.round(count/leaders.length*100) : 0}%"></div>
+                  </div>
+                </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  updateCrisisBadge();
+}
+
+function generateCeoActions(riskData) {
+  const actions = [];
+  for (const x of riskData) {
+    if (actions.length >= 5) break;
+    const r = x.risk;
+    const l = x.leader;
+    if (r.level === 'critical') {
+      actions.push({
+        leaderId: l.id,
+        icon: '🚨',
+        who: l.name + ' — ' + l.area,
+        situation: `Score de crise: ${r.score} pontos. ${r.signals[0] || 'Múltiplos sinais críticos detectados.'}`,
+        question: r.signals.some(s => /execução|plano/i.test(s))
+          ? 'O que está impedindo a execução? O que você ainda não decidiu que mantém esse problema vivo?'
+          : r.daysSince > 14
+          ? 'O que aconteceu desde nossa última conversa que você ainda não trouxe para mim?'
+          : 'Onde você está agindo como executor quando deveria agir como dono?',
+        risk: r.signals[0] || 'Risco elevado detectado',
+        deadline: 'Esta semana',
+      });
+    } else if (r.level === 'alto') {
+      actions.push({
+        leaderId: l.id,
+        icon: '⚠',
+        who: l.name + ' — ' + l.area,
+        situation: `Atenção elevada: ${r.score} pontos. ${r.signals[0] || ''}`,
+        question: r.signals.some(s => /conversa/i.test(s))
+          ? 'Que conversa difícil você está evitando que, se acontecesse esta semana, mudaria o resultado?'
+          : 'Se esse padrão continuar por mais 60 dias, qual será o custo real para a empresa?',
+        risk: r.signals[0] || 'Monitoramento necessário',
+        deadline: 'Próximos 5 dias',
+      });
+    }
+  }
+  return actions;
+}
+
+// ============================================================
+// TIMELINE INTELIGENTE POR LÍDER (15.2)
+// ============================================================
+let _selectedTimelineLeader = null;
+
+function renderTimelinesPage() {
+  const el = document.getElementById('timeline-content');
+  if (!el) return;
+
+  el.innerHTML = `
+    <div class="card mb-20">
+      <div class="card-title">◷ Timeline por Líder</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        ${store.leaders.map(l => {
+          const r = calcRiskScore(l);
+          return `<button class="btn btn-secondary btn-sm" onclick="renderLeaderTimeline('${l.id}')" style="border-color:${r.color}">
+            <span style="width:10px;height:10px;border-radius:50%;background:${r.color};display:inline-block;margin-right:4px"></span>
+            ${l.name}
+          </button>`;
+        }).join('')}
+      </div>
+    </div>
+    <div id="leader-timeline-detail">
+      <p class="text-muted text-sm">Selecione um líder acima para ver a timeline.</p>
+    </div>
+  `;
+
+  if (_selectedTimelineLeader) renderLeaderTimeline(_selectedTimelineLeader);
+}
+
+function renderLeaderTimeline(leaderId) {
+  _selectedTimelineLeader = leaderId;
+  const el = document.getElementById('leader-timeline-detail');
+  if (!el) return;
+
+  const leader = store.leaders.find(l => l.id === leaderId);
+  if (!leader) return;
+
+  const sessions = store.sessions.filter(s => s.leaderId === leaderId).sort((a,b) => new Date(a.dateISO)-new Date(b.dateISO));
+  const alerts   = store.alerts.filter(a => a.leaderId === leaderId);
+  const actions  = store.actionItems.filter(a => a.leaderId === leaderId);
+  const risk = calcRiskScore(leader);
+
+  // Construir eventos da timeline
+  const events = [];
+
+  // Anamnese
+  if (leader.anamneseDone && leader.profile?.createdAt) {
+    events.push({ date: leader.profile.createdAt, type: 'anamnese', title: 'Anamnese concluída', body: `Perfil gerado. Estilo: ${leader.profile.style||'—'}`, color: '#10b981' });
+  }
+
+  // Sessões
+  sessions.forEach(s => {
+    const acts = actions.filter(a => a.sessionId === s.id);
+    events.push({
+      date: s.dateISO,
+      type: 'session',
+      title: `1:1 — ${s.date}`,
+      body: `${s.data?.mainTopic ? '"'+s.data.mainTopic.substring(0,80)+'"' : 'Sem tópico'} · ${acts.length} ações geradas`,
+      color: '#6366f1',
+      sessionId: s.id,
+    });
+  });
+
+  // Alertas
+  alerts.forEach(a => {
+    events.push({ date: a.date, type: 'alert', title: a.title, body: a.body?.substring(0,100), color: a.level === 'critical' ? '#ef4444' : a.level === 'alto' ? '#fb923c' : '#f59e0b' });
+  });
+
+  // Ações concluídas
+  actions.filter(a => a.status === 'done').forEach(a => {
+    events.push({ date: a.createdAt || new Date().toISOString(), type: 'done', title: `✓ Ação concluída`, body: a.action?.substring(0,80), color: '#10b981' });
+  });
+
+  // Ordenar por data
+  events.sort((a,b) => new Date(a.date)-new Date(b.date));
+
+  // Métricas de evolução
+  const execPcts = sessions.map((s,i) => {
+    const acts = actions.filter(a => a.sessionId === s.id);
+    const doneActs = acts.filter(a => a.status === 'done').length;
+    return acts.length ? Math.round(doneActs/acts.length*100) : 0;
+  });
+
+  // Padrões identificados pela IA
+  const patterns = identifyLeaderPatterns(leader, sessions, actions, alerts);
+
+  el.innerHTML = `
+    <div class="card mb-16" style="border-color:${leader.color||'#6366f1'}">
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="width:48px;height:48px;border-radius:50%;background:${leader.color||'#6366f1'};display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800">${leader.name[0]}</div>
+        <div style="flex:1">
+          <div style="font-size:18px;font-weight:800">${leader.name}</div>
+          <div style="font-size:13px;color:var(--text2)">${leader.area} · ${leader.title||''}</div>
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+          <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:#6366f1">${sessions.length}</div><div style="font-size:11px;color:var(--text3)">Reuniões</div></div>
+          <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:#f59e0b">${actions.filter(a=>a.status==='pending').length}</div><div style="font-size:11px;color:var(--text3)">Pendentes</div></div>
+          <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:#10b981">${actions.filter(a=>a.status==='done').length}</div><div style="font-size:11px;color:var(--text3)">Concluídas</div></div>
+          <div>${getRiskHtml(risk)}</div>
+        </div>
+      </div>
+    </div>
+
+    ${patterns.length ? `
+    <div class="card mb-16" style="border-color:rgba(99,102,241,.3)">
+      <div class="card-title">🧠 Padrões identificados pela IA</div>
+      <div style="display:grid;gap:8px">
+        ${patterns.map(p => `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--surface2);border-radius:8px">
+          <span style="font-size:18px">${p.icon}</span>
+          <div><div class="fw-600 text-sm">${p.title}</div><div class="text-xs text-muted">${p.body}</div></div>
+        </div>`).join('')}
+      </div>
+    </div>` : ''}
+
+    <div class="card">
+      <div class="card-title">◷ Linha do Tempo</div>
+      ${!events.length ? '<p class="text-sm text-muted">Nenhum evento registrado ainda.</p>' : `
+        <div class="timeline-wrap">
+          ${events.map(e => `
+            <div class="timeline-item">
+              <div class="timeline-dot" style="background:${e.color}"></div>
+              <div class="timeline-content">
+                <div class="timeline-date">${new Date(e.date).toLocaleDateString('pt-BR',{day:'numeric',month:'short',year:'numeric'})}</div>
+                <div class="timeline-title" style="color:${e.color}">${e.title}</div>
+                ${e.body ? `<div class="timeline-body">${e.body}</div>` : ''}
+                ${e.sessionId ? `<button class="btn btn-secondary btn-xs mt-8" onclick="viewSession('${e.sessionId}')">Ver sessão</button>` : ''}
+              </div>
+            </div>`).join('')}
+        </div>`}
+    </div>
+  `;
+}
+
+function identifyLeaderPatterns(leader, sessions, actions, alerts) {
+  const patterns = [];
+  if (!sessions.length) return patterns;
+
+  const pending = actions.filter(a => a.status === 'pending').length;
+  const done = actions.filter(a => a.status === 'done').length;
+  const total = pending + done;
+  const execPct = total > 0 ? Math.round(done/total*100) : 0;
+
+  const withAvoided = sessions.filter(s => s.data?.avoided?.length > 10).length;
+  const withRisks   = sessions.filter(s => s.data?.risks?.length > 30).length;
+  const withCommit  = sessions.filter(s => s.data?.commitment?.length > 10).length;
+
+  if (withAvoided >= 2) patterns.push({ icon: '🚫', title: 'Padrão de Evitamento', body: `Conversas difíceis evitadas em ${withAvoided} sessões consecutivas.` });
+  if (withRisks >= 2)   patterns.push({ icon: '⚠', title: 'Riscos Recorrentes', body: `Riscos operacionais mencionados em ${withRisks} sessões. Problema não resolvido na raiz.` });
+  if (withCommit >= 2 && execPct < 50) patterns.push({ icon: '🔁', title: 'Prometer e Não Executar', body: `Comprometimento registrado em ${withCommit} sessões, mas execução em ${execPct}%. Incoerência detectada.` });
+  if (execPct >= 80 && sessions.length >= 2) patterns.push({ icon: '🚀', title: 'Aceleração Positiva', body: `Execução em ${execPct}%. Liderança em crescimento sustentado.` });
+  if (sessions.length >= 3 && execPct < 40) patterns.push({ icon: '📉', title: 'Estagnação Executiva', body: `Baixa execução consistente ao longo de ${sessions.length} sessões. Intervenção recomendada.` });
+
+  return patterns;
+}
+
+// ============================================================
+// PROMPTS CONTEXTUAIS AUTOMÁTICOS (15.4)
+// ============================================================
+const PROMPT_LIBRARY = [
+  { id: 'p1', type: 'cobranca', tag: 'Cobrança', tagClass: 'prompt-tag-cob',
+    title: 'Cobrança Direta — Meta não atingida',
+    text: 'Estamos no terceiro mês consecutivo abaixo da meta. O que exatamente você ainda não decidiu que está mantendo esse problema vivo? Não quero análise — quero uma decisão.',
+    triggers: ['baixa execução', 'metas', 'planos vencidos'] },
+  { id: 'p2', type: 'cobranca', tag: 'Cobrança', tagClass: 'prompt-tag-cob',
+    title: 'Cobrança — Planos vencidos',
+    text: 'Você se comprometeu com isso na última sessão. Não foi feito. O que impediu? E mais importante: o que vai impedir que isso aconteça novamente?',
+    triggers: ['planos pendentes', 'comprometimento'] },
+  { id: 'p3', type: 'provocacao', tag: 'Provocação', tagClass: 'prompt-tag-pro',
+    title: 'Provocação — Crescimento',
+    text: 'Você está crescendo como líder ou apenas se adaptando? Qual a diferença entre o que você fazia há 6 meses e o que você faz hoje? Se não há diferença, o que isso diz?',
+    triggers: ['maturidade crescendo', 'execução boa'] },
+  { id: 'p4', type: 'provocacao', tag: 'Provocação', tagClass: 'prompt-tag-pro',
+    title: 'Provocação — Autonomia da equipe',
+    text: 'Sua equipe ainda depende demais de você? O que você faz que eles deveriam fazer? O que você precisa parar de fazer para que eles cresçam?',
+    triggers: ['dependência', 'delegação'] },
+  { id: 'p5', type: 'confronto', tag: 'Confronto', tagClass: 'prompt-tag-con',
+    title: 'Confronto — Incoerência',
+    text: 'Você diz uma coisa e faz outra. Suas ações estão ensinando sua equipe a não levar seus compromissos a sério. O que você precisa mudar primeiro — o que você diz ou o que você faz?',
+    triggers: ['incoerência', 'prometer e não executar'] },
+  { id: 'p6', type: 'confronto', tag: 'Confronto', tagClass: 'prompt-tag-con',
+    title: 'Confronto — Conversa evitada',
+    text: 'Você está evitando uma conversa que precisa acontecer. Cada dia que passa aumenta o custo dessa conversa. O que você está protegendo ao não tê-la?',
+    triggers: ['conversa evitada', 'evitamento'] },
+  { id: 'p7', type: 'expansao', tag: 'Expansão', tagClass: 'prompt-tag-exp',
+    title: 'Expansão — Próximo nível',
+    text: 'Você chegou onde queria. Agora: qual é o próximo nível para você como líder? O que precisa morrer na sua forma atual de liderar para que esse próximo nível nasça?',
+    triggers: ['saudável', 'execução alta', 'crescimento'] },
+  { id: 'p8', type: 'expansao', tag: 'Expansão', tagClass: 'prompt-tag-exp',
+    title: 'Expansão — Legado',
+    text: 'Daqui a 2 anos, quando olharmos para trás, o que você terá construído que vai além dos números? Que tipo de líderes você terá formado?',
+    triggers: ['maturidade avançado', 'crescimento sustentado'] },
+];
+
+function getContextualPrompts(leader) {
+  const risk = calcRiskScore(leader);
+  const sessions = store.sessions.filter(s => s.leaderId === leader.id);
+  const actions = store.actionItems.filter(a => a.leaderId === leader.id);
+  const patterns = identifyLeaderPatterns(leader, sessions, actions, []);
+
+  const suggested = [];
+
+  // Por nível de risco
+  if (risk.level === 'critical' || risk.level === 'alto') {
+    suggested.push(...PROMPT_LIBRARY.filter(p => p.type === 'cobranca' || p.type === 'confronto').slice(0,2));
+  } else if (risk.level === 'medio') {
+    suggested.push(...PROMPT_LIBRARY.filter(p => p.type === 'confronto' || p.type === 'provocacao').slice(0,2));
+  } else {
+    suggested.push(...PROMPT_LIBRARY.filter(p => p.type === 'expansao' || p.type === 'provocacao').slice(0,2));
+  }
+
+  // Por padrões
+  if (patterns.some(p => /evitamento/i.test(p.title))) suggested.push(PROMPT_LIBRARY.find(p => p.id === 'p6'));
+  if (patterns.some(p => /prometer/i.test(p.title))) suggested.push(PROMPT_LIBRARY.find(p => p.id === 'p5'));
+
+  // Dedup
+  const seen = new Set();
+  return suggested.filter(p => p && !seen.has(p.id) && seen.add(p.id)).slice(0,4);
+}
+
+function renderContextualPrompts(leaderId) {
+  const leader = store.leaders.find(l => l.id === leaderId);
+  if (!leader) return '';
+  const prompts = getContextualPrompts(leader);
+  if (!prompts.length) return '';
+
+  return `
+    <div class="card mb-16" style="border-color:rgba(99,102,241,.25)">
+      <div class="card-title">⚡ Prompts Contextuais Sugeridos para esta Sessão</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Baseado no perfil, histórico e score de risco de ${leader.name}</div>
+      <div style="display:grid;gap:8px">
+        ${prompts.map(p => `
+          <div class="prompt-card" onclick="applyContextualPrompt('${p.id}','${leaderId}')">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <span class="prompt-tag ${p.tagClass}">${p.tag}</span>
+              <span class="fw-600 text-sm">${p.title}</span>
+            </div>
+            <div class="text-sm text-muted" style="line-height:1.5">"${p.text.substring(0,100)}..."</div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn btn-secondary btn-xs" onclick="event.stopPropagation();applyContextualPrompt('${p.id}','${leaderId}')">✓ Aplicar</button>
+              <button class="btn btn-secondary btn-xs" onclick="event.stopPropagation();copyPrompt('${p.id}')">⎘ Copiar</button>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function applyContextualPrompt(promptId, leaderId) {
+  const p = PROMPT_LIBRARY.find(x => x.id === promptId);
+  if (!p) return;
+  const advisorEl = document.getElementById('f-advisor-response');
+  if (advisorEl) {
+    advisorEl.placeholder = p.text;
+    advisorEl.focus();
+  } else {
+    alert('Prompt: "' + p.text + '"');
+  }
+}
+
+function copyPrompt(promptId) {
+  const p = PROMPT_LIBRARY.find(x => x.id === promptId);
+  if (!p) return;
+  navigator.clipboard?.writeText(p.text).then(() => {}).catch(() => {});
+}
+
+// Injetar prompts contextuais no passo advisor da sessão
+const _origRenderStepContent = renderStepContent;
+
+// ============================================================
+// MATURITY MODEL — D1/D2/D3/D4 (15.5)
+// ============================================================
+const MATURITY_LEVELS = {
+  D1: { label: 'D1 — Entusiasta Novato',    badge: 'maturity-d1', desc: 'Alta motivação, baixa competência. Precisa de direção clara e suporte frequente.', criteria: ['Alta intenção', 'Baixa experiência', 'Dependente de validação', 'Entusiasmo elevado'] },
+  D2: { label: 'D2 — Aprendiz Desiludido',  badge: 'maturity-d2', desc: 'Competência crescendo mas motivação oscilante. Padrão de frustração com complexidade.', criteria: ['Boa intenção', 'Baixa consistência', 'Alta dependência', 'Oscilação emocional'] },
+  D3: { label: 'D3 — Capaz Relutante',      badge: 'maturity-d3', desc: 'Alta competência, motivação variável. Sabe fazer mas hesita em assumir autonomia.', criteria: ['Alta competência', 'Confiança instável', 'Precisa de suporte emocional', 'Executa com supervisão'] },
+  D4: { label: 'D4 — Realizador Autônomo',  badge: 'maturity-d4', desc: 'Alta competência e alta motivação. Autônomo, proativo, referência para a equipe.', criteria: ['Alta competência', 'Alta motivação', 'Autônomo', 'Multiplicador'] },
+};
+
+function inferMaturityLevel(leader) {
+  const sessions = store.sessions.filter(s => s.leaderId === leader.id);
+  const actions = store.actionItems.filter(a => a.leaderId === leader.id);
+  const done = actions.filter(a => a.status === 'done').length;
+  const total = actions.length;
+  const execPct = total > 0 ? Math.round(done/total*100) : 0;
+  const risk = calcRiskScore(leader);
+
+  if (!sessions.length || !leader.anamneseDone) return 'D1';
+  if (execPct >= 80 && sessions.length >= 3 && risk.score <= 2) return 'D4';
+  if (execPct >= 60 && sessions.length >= 2) return 'D3';
+  if (sessions.length >= 1 && execPct >= 30) return 'D2';
+  return 'D1';
+}
+
+// ============================================================
+// ENRICH renderAdminDashboard com Risk Engine
+// ============================================================
+const _origRenderAdminDashboard = renderAdminDashboard;
+function renderAdminDashboard() {
+  _origRenderAdminDashboard();
+  // Adiciona coluna de risco no mapa de líderes
+  enrichLeaderMapWithRisk();
+  updateCrisisBadge();
+}
+
+function enrichLeaderMapWithRisk() {
+  const mapEl = document.getElementById('dash-leader-map');
+  if (!mapEl) return;
+  // Reconstruir tabela com coluna de risco
+  const sessions = store.sessions;
+  mapEl.innerHTML = `<div style="overflow-x:auto"><table style="width:100%"><thead><tr>
+    <th>Líder</th><th>Área</th><th>Reuniões</th><th>Planos</th><th>Execução</th><th>Maturidade</th><th>Risco</th><th></th>
+  </tr></thead><tbody>${
+    store.leaders.map(l => {
+      const ls = sessions.filter(s => s.leaderId === l.id);
+      const lp = store.actionItems.filter(a => a.leaderId === l.id && a.status === 'pending');
+      const ld = store.actionItems.filter(a => a.leaderId === l.id && a.status === 'done');
+      const total = lp.length + ld.length;
+      const execPct = total > 0 ? Math.round((ld.length / total) * 100) : 0;
+      const matKey = inferMaturityLevel(l);
+      const mat = MATURITY_LEVELS[matKey];
+      const execColor = execPct >= 80 ? '#22c55e' : execPct >= 50 ? '#f59e0b' : '#ef4444';
+      const risk = calcRiskScore(l);
+      return `<tr>
+        <td><div class="flex items-center gap-8"><div class="user-avatar" style="background:${l.color};width:28px;height:28px;font-size:12px">${l.name[0]}</div><span class="fw-600">${l.name}</span></div></td>
+        <td class="text-muted">${l.area}</td>
+        <td>${ls.length}</td>
+        <td>${lp.length > 0 ? `<span class="badge badge-yellow">${lp.length}</span>` : '<span class="badge badge-green">0</span>'}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="progress-bar" style="width:80px"><div class="progress-fill" style="width:${execPct}%;background:${execColor}"></div></div>
+            <span class="text-sm" style="color:${execColor}">${execPct}%</span>
+          </div>
+        </td>
+        <td><span class="badge ${mat.badge}" style="font-size:11px">${matKey}</span></td>
+        <td>${getRiskHtml(risk)}</td>
+        <td>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-secondary btn-sm" onclick="startNew1on1FromAdmin('${l.id}')">1:1</button>
+            <button class="btn btn-secondary btn-sm" onclick="showPage('timeline');renderLeaderTimeline('${l.id}')">◷</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('')
+  }</tbody></table></div>`;
 }
 
 // ============================================================
