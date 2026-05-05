@@ -498,6 +498,10 @@
       </div>
     </nav>
     <div class="sidebar-footer">
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <button class="btn btn-secondary btn-sm" style="flex:1;font-size:11px" onclick="openChangelog()">✦ v<span id="sidebar-version"></span></button>
+        <button class="btn btn-secondary btn-sm" style="flex:1;font-size:11px" onclick="exportUserData()" title="Backup dos seus dados">⬇ Backup</button>
+      </div>
       <button class="btn btn-secondary btn-sm" style="width:100%" onclick="doLogout()">Sair</button>
     </div>
   </div>
@@ -979,15 +983,129 @@
   </div>
 </div>
 
+<!-- CHANGELOG MODAL -->
+<div class="modal-overlay" id="changelog-modal">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <div class="modal-title">✦ Novidades da Versão</div>
+      <button class="modal-close" onclick="closeModal('changelog-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="changelog-body"></div>
+  </div>
+</div>
+
+<!-- UPDATE BANNER -->
+<div id="update-banner" style="display:none;position:fixed;bottom:20px;right:20px;z-index:9999;
+  background:linear-gradient(135deg,#0ea5e9,#10b981);color:#fff;padding:14px 20px;border-radius:12px;
+  box-shadow:0 8px 32px rgba(14,165,233,.4);max-width:320px;font-size:13px;font-weight:600;
+  display:flex;align-items:center;gap:12px;cursor:pointer" onclick="closeUpdateBanner()">
+  <span style="font-size:18px">✦</span>
+  <div>
+    <div id="update-banner-msg" style="font-weight:700"></div>
+    <div style="font-size:11px;opacity:.85;margin-top:2px">Seus dados e histórico estão preservados.</div>
+  </div>
+  <span style="margin-left:auto;opacity:.7;font-size:16px">✕</span>
+</div>
+
 <script>
+// ============================================================
+// VERSÃO E CHANGELOG
+// ============================================================
+const APP_VERSION = '1.2.0';
+const APP_VERSION_DATE = '2026-05-05';
+
+const CHANGELOG = [
+  {
+    version: '1.2.0', date: '2026-05-05', type: 'fix+feature',
+    changes: [
+      '✅ Correção crítica: Dashboard não carregava no mobile (recursão infinita)',
+      '📱 Responsividade mobile completa: cards empilhados, scroll vertical e horizontal',
+      '⚠️ Empty states inteligentes: alertas, reuniões e mapa de líderes',
+      '🎨 Skeleton loader CSS para estados de carregamento',
+      '⚡ Risk Engine integrado diretamente no Mapa de Líderes (coluna Risco + Timeline)',
+      '📋 Sistema de versionamento, changelog e audit log implementados',
+      '💾 Export/backup de dados do usuário em JSON',
+      '🔒 Migração segura de dados: novos campos não quebram registros existentes',
+    ]
+  },
+  {
+    version: '1.1.0', date: '2026-05-04', type: 'feature',
+    changes: [
+      '🎯 Risk Engine: cálculo de score de risco por líder',
+      '🔴 Crisis Board: painel de situações críticas',
+      '⏱ Timelines: histórico visual por líder',
+      '📊 Maturidade D1–D4: inferência automática por líder',
+      '🤖 CEO Digital: base cognitiva e biblioteca de prompts',
+    ]
+  },
+  {
+    version: '1.0.0', date: '2026-05-03', type: 'launch',
+    changes: [
+      '🚀 Lançamento base da plataforma Meta.X Advisor',
+      '👥 Gestão de líderes e 1:1s',
+      '📝 Anamnese completa com 30+ perguntas',
+      '📊 Dashboard executivo com KPIs',
+      '🔐 Autenticação com troca de senha no primeiro acesso',
+    ]
+  }
+];
+
+// ============================================================
+// AUDIT LOG
+// ============================================================
+const AUDIT_KEY = 'metax_audit_log';
+
+function auditLog(action, details = {}) {
+  try {
+    const logs = JSON.parse(localStorage.getItem(AUDIT_KEY) || '[]');
+    logs.push({
+      ts: new Date().toISOString(),
+      user: currentUser?.email || 'sistema',
+      action,
+      ...details
+    });
+    // Mantém apenas os últimos 500 registros
+    if (logs.length > 500) logs.splice(0, logs.length - 500);
+    localStorage.setItem(AUDIT_KEY, JSON.stringify(logs));
+  } catch(e) {}
+}
+
 // ============================================================
 // DATA STORE
 // ============================================================
 const STORE_KEY = 'metax_1to1_v3';
+const STORE_VERSION_KEY = 'metax_store_version';
 
 function loadStore() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || initStore(); }
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORE_KEY));
+    return raw ? migrateStore(raw) : initStore();
+  }
   catch(e) { return initStore(); }
+}
+
+// Migração segura: garante campos novos sem sobrescrever dados existentes
+function migrateStore(s) {
+  // Garante estrutura CEO
+  if (!s.ceo) s.ceo = { items: [], prompts: [], teaches: [], refinements: [] };
+  if (!s.ceo.items) s.ceo.items = [];
+  if (!s.ceo.prompts) s.ceo.prompts = [];
+  if (!s.ceo.teaches) s.ceo.teaches = [];
+  if (!s.ceo.refinements) s.ceo.refinements = [];
+  // Garante arrays principais
+  if (!s.sessions) s.sessions = [];
+  if (!s.alerts) s.alerts = [];
+  if (!s.actionItems) s.actionItems = [];
+  if (!s.users) s.users = [];
+  if (!s.leaders) s.leaders = [];
+  // Garante campos opcionais em líderes sem sobrescrever dados existentes
+  s.leaders = s.leaders.map(l => ({
+    whatsapp: '', title: '', notes: '', photo: null,
+    ...l
+  }));
+  // Marca versão do store
+  localStorage.setItem(STORE_VERSION_KEY, APP_VERSION);
+  return s;
 }
 
 function initStore() {
@@ -1038,6 +1156,7 @@ function doLogin() {
   const admin = store.users.find(u => u.email.toLowerCase() === user && u.pass === pass);
   if (admin) {
     currentUser = { ...admin, isAdmin: true };
+    auditLog('login', { role: 'admin' });
     if (admin.mustChangePw) { showForcePw(admin); return; }
     startApp(); return;
   }
@@ -1045,10 +1164,12 @@ function doLogin() {
   const leader = store.leaders.find(l => l.email.toLowerCase() === user && l.pass === pass);
   if (leader) {
     currentUser = { ...leader, isAdmin: false };
+    auditLog('login', { role: 'leader' });
     if (leader.mustChangePw) { showForcePw(leader); return; }
     startApp(); return;
   }
 
+  auditLog('login_failed', { email: user });
   err.style.display = 'block';
 }
 
@@ -1108,6 +1229,23 @@ function startApp() {
   document.getElementById('force-pw-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
 
+  // Versão na sidebar
+  const svEl = document.getElementById('sidebar-version');
+  if (svEl) svEl.textContent = APP_VERSION;
+
+  // Banner de atualização: mostra se a versão mudou desde o último login
+  const lastSeenVersion = localStorage.getItem('metax_last_seen_version');
+  if (lastSeenVersion && lastSeenVersion !== APP_VERSION) {
+    const banner = document.getElementById('update-banner');
+    const msg = document.getElementById('update-banner-msg');
+    if (banner && msg) {
+      msg.textContent = `Meta.X atualizado para v${APP_VERSION}`;
+      banner.style.display = 'flex';
+      setTimeout(() => closeUpdateBanner(), 8000);
+    }
+  }
+  localStorage.setItem('metax_last_seen_version', APP_VERSION);
+
   // Avatar
   const avatarEl = document.getElementById('sidebar-avatar');
   if (currentUser.photo) {
@@ -1158,6 +1296,56 @@ function updateAlertsBadge() {
   const unread = store.alerts.filter(a => !a.read).length;
   badge.textContent = unread;
   badge.style.display = unread > 0 ? '' : 'none';
+}
+
+// ============================================================
+// CHANGELOG E VERSIONAMENTO
+// ============================================================
+function openChangelog() {
+  const body = document.getElementById('changelog-body');
+  if (!body) return;
+  const typeBadge = { launch: 'badge-green', feature: 'badge-blue', fix: 'badge-yellow', 'fix+feature': 'badge-purple' };
+  const typeLabel = { launch: 'Lançamento', feature: 'Novo recurso', fix: 'Correção', 'fix+feature': 'Fix + Feature' };
+  body.innerHTML = CHANGELOG.map((entry, i) => `
+    <div style="margin-bottom:${i < CHANGELOG.length-1 ? '24' : '0'}px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span style="font-size:16px;font-weight:800;color:var(--accent2)">v${entry.version}</span>
+        <span class="badge ${typeBadge[entry.type]||'badge-gray'}" style="font-size:11px">${typeLabel[entry.type]||entry.type}</span>
+        <span class="text-xs text-muted" style="margin-left:auto">${entry.date}</span>
+      </div>
+      <ul style="padding-left:4px;list-style:none">
+        ${entry.changes.map(c => `<li style="font-size:13px;color:var(--text2);padding:4px 0;border-bottom:1px solid var(--border)">${c}</li>`).join('')}
+      </ul>
+    </div>`).join('');
+  document.getElementById('changelog-modal').classList.add('open');
+  auditLog('changelog_viewed');
+}
+
+function closeUpdateBanner() {
+  const b = document.getElementById('update-banner');
+  if (b) b.style.display = 'none';
+}
+
+// ============================================================
+// BACKUP / EXPORT DE DADOS
+// ============================================================
+function exportUserData() {
+  const snapshot = {
+    exportedAt: new Date().toISOString(),
+    appVersion: APP_VERSION,
+    exportedBy: currentUser?.email || 'desconhecido',
+    store: JSON.parse(JSON.stringify(store)), // deep clone sem referências
+    auditLog: JSON.parse(localStorage.getItem(AUDIT_KEY) || '[]')
+  };
+  const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().split('T')[0];
+  a.href = url;
+  a.download = `metax-backup-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  auditLog('data_exported', { date });
 }
 
 // ============================================================
@@ -1637,6 +1825,7 @@ function finishAnamnese() {
   leader.anamneseAnswers = a;
   leader.anamneseProgress = null; // clear draft
   saveStore();
+  auditLog('anamnese_completed', { leaderId: leader.id, leaderName: leader.name });
 
   document.getElementById('anamnese-modal').classList.remove('open');
   showProfileSummary(profile, leader);
@@ -2443,6 +2632,7 @@ function finishSession() {
     } : null,
   };
   store.sessions.push(session);
+  auditLog('session_saved', { sessionId, leaderId: sessionState.leaderId });
 
   // Save action items
   (sessionState.data.actions || []).forEach(a => {
@@ -3093,6 +3283,8 @@ function sendWhatsAppReminder(leaderId) {
 
 function deleteLeader(id) {
   if (!confirm('Remover este líder? Todos os dados serão excluídos permanentemente.')) return;
+  const leader = store.leaders.find(l => l.id === id);
+  auditLog('leader_deleted', { leaderId: id, leaderName: leader?.name });
   store.leaders = store.leaders.filter(l => l.id !== id);
   store.sessions = store.sessions.filter(s => s.leaderId !== id);
   store.actionItems = store.actionItems.filter(a => a.leaderId !== id);
