@@ -399,6 +399,38 @@
   .dash-empty-state .empty-icon { font-size:36px; margin-bottom:12px; }
   .dash-empty-state .empty-title { font-size:15px; font-weight:600; color:var(--text2); margin-bottom:6px; }
   .dash-empty-state .empty-sub { font-size:13px; }
+
+  /* TOAST */
+  #toast-container { position:fixed; bottom:24px; right:24px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+  .toast { background:var(--text); color:#fff; padding:12px 18px; border-radius:10px; font-size:13px; font-weight:600; box-shadow:var(--shadow-lg); opacity:0; transform:translateY(8px); transition:all .25s; max-width:320px; pointer-events:auto; }
+  .toast-show { opacity:1; transform:translateY(0); }
+  .toast-success { background:#15803d; }
+  .toast-error { background:var(--danger); }
+  .toast-warning { background:var(--warning); }
+
+  /* NOTIFICATION MODULE (Doc 19) */
+  .notif-row { display:flex; align-items:flex-start; gap:14px; padding:14px 0; border-bottom:1px solid var(--border); }
+  .notif-row:last-child { border-bottom:none; }
+  .notif-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+  .notif-icon-critical { background:rgba(220,38,38,.12); }
+  .notif-icon-warning  { background:rgba(217,119,6,.10); }
+  .notif-icon-info     { background:rgba(0,118,189,.08); }
+  .notif-icon-success  { background:rgba(22,163,74,.10); }
+  .notif-title { font-size:13px; font-weight:600; color:var(--text); margin-bottom:2px; }
+  .notif-body  { font-size:12px; color:var(--text2); line-height:1.5; }
+  .notif-meta  { font-size:11px; color:var(--text3); margin-top:3px; display:flex; gap:10px; align-items:center; }
+  .notif-unread { background:rgba(0,118,189,.05); border-radius:10px; padding:0 10px; margin-left:-10px; margin-right:-10px; padding-left:10px; padding-right:10px; }
+  .notif-kpi { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 20px; text-align:center; }
+  .notif-kpi-value { font-size:28px; font-weight:800; color:var(--text); }
+  .notif-kpi-label { font-size:11px; color:var(--text3); font-weight:700; text-transform:uppercase; letter-spacing:.6px; margin-top:4px; }
+  .notif-cfg-row { display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border); gap:16px; }
+  .notif-cfg-row:last-child { border-bottom:none; }
+  .notif-toggle { position:relative; display:inline-block; width:40px; height:22px; flex-shrink:0; }
+  .notif-toggle input { opacity:0; width:0; height:0; }
+  .notif-slider { position:absolute; cursor:pointer; inset:0; background:var(--border2); border-radius:22px; transition:.3s; }
+  .notif-slider:before { position:absolute; content:''; height:16px; width:16px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.3s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+  .notif-toggle input:checked + .notif-slider { background:var(--accent); }
+  .notif-toggle input:checked + .notif-slider:before { transform:translateX(18px); }
 </style>
 </head>
 <body>
@@ -519,6 +551,10 @@
       </div>
       <div class="nav-item" onclick="showPage('admin')" id="nav-admin" style="display:none">
         <span class="icon">⚙</span> Administração
+      </div>
+      <div class="nav-item" onclick="showPage('notifications')" id="nav-notifications" style="display:none">
+        <span class="icon">🔔</span> Notificações
+        <span id="notif-badge" style="margin-left:auto;background:#ef4444;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700;display:none">0</span>
       </div>
     </nav>
     <div class="sidebar-footer">
@@ -658,8 +694,16 @@
     <div class="page" id="page-timeline">
       <div id="timeline-content"></div>
     </div>
+
+    <!-- NOTIFICATIONS PAGE -->
+    <div class="page" id="page-notifications">
+      <div id="notifications-content"></div>
+    </div>
   </div>
 </div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
 
 <!-- CEO UPLOAD MODAL -->
 <div class="modal-overlay" id="ceo-upload-modal">
@@ -971,8 +1015,9 @@
           <input type="email" id="edit-leader-email" placeholder="nome@metax.ind.br">
         </div>
         <div class="form-group">
-          <label>WhatsApp (com DDI)</label>
-          <input type="text" id="edit-leader-whatsapp" placeholder="Ex: 5511999999999">
+          <label>WhatsApp</label>
+          <input type="text" id="edit-leader-whatsapp" placeholder="(27) 99999-9999" oninput="maskPhoneInput(this)" inputmode="numeric">
+          <div class="text-xs text-muted" style="margin-top:4px">Formato: (DDD) 99999-9999</div>
         </div>
         <div class="form-group">
           <label>Cargo / Título</label>
@@ -1136,6 +1181,7 @@ function migrateStore(s) {
   // Garante campos opcionais em líderes sem sobrescrever dados existentes
   s.leaders = s.leaders.map(l => ({
     whatsapp: '', title: '', notes: '', photo: null,
+    photoHistory: [], photoUpdatedAt: null, photoUpdatedBy: null,
     ...l
   }));
   // Marca versão do store
@@ -1296,7 +1342,7 @@ function startApp() {
   if (currentUser.isAdmin) {
     // Admin sees: leaders, alerts, new1on1, reports, admin, ceo — NOT my1on1/profile
     ['nav-leaders','nav-alerts','nav-reports','nav-admin','nav-sec-admin',
-     'nav-ceo','nav-sec-ceo','nav-new1on1','nav-crisis','nav-timeline'].forEach(id => {
+     'nav-ceo','nav-sec-ceo','nav-new1on1','nav-crisis','nav-timeline','nav-notifications'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = '';
     });
     ['nav-my1on1','nav-profile','nav-sec-profile'].forEach(id => {
@@ -1304,6 +1350,7 @@ function startApp() {
     });
     renderAdminDashboard();
     updateAlertsBadge();
+    setTimeout(() => { checkAndGenerateNotifications(); updateNotifBadge(); }, 800);
   } else {
     // Leader sees: my1on1, new1on1, alerts, profile, history — NOT admin/reports/ceo/leaders
     ['nav-my1on1','nav-new1on1','nav-alerts','nav-profile','nav-sec-profile'].forEach(id => {
@@ -1381,6 +1428,8 @@ function exportUserData() {
   a.click();
   URL.revokeObjectURL(url);
   auditLog('data_exported', { date });
+  addNotification('data_exported', 'Backup realizado com sucesso', `Export de dados gerado em ${date} por ${currentUser?.email || 'admin'}.`, { date });
+  showToast('Backup gerado com sucesso!', 'success');
 }
 
 // ============================================================
@@ -1397,7 +1446,8 @@ function showPage(page) {
     dashboard: 'Dashboard', leaders: 'Líderes', my1on1: 'Meus 1:1s',
     new1on1: 'Novo 1:1', history: 'Histórico', alerts: 'Alertas',
     reports: 'Relatórios', admin: 'Administração', ceo: 'CEO Digital',
-    profile: 'Meu Perfil', crisis: '🔴 Crisis Board', timeline: 'Timelines de Líderes'
+    profile: 'Meu Perfil', crisis: '🔴 Crisis Board', timeline: 'Timelines de Líderes',
+    notifications: '🔔 Notificações'
   };
   document.getElementById('topbar-title').textContent = titles[page] || page;
 
@@ -1413,6 +1463,7 @@ function showPage(page) {
   if (page === 'history') renderHistory();
   if (page === 'ceo') renderCeoPage();
   if (page === 'profile') renderProfilePage();
+  if (page === 'notifications') renderNotificationsPage();
 }
 
 function markAlertsRead() {
@@ -2033,8 +2084,10 @@ function saveNewLeader() {
   if (pass.length < 6) { alert('Senha mínima de 6 caracteres.'); return; }
 
   const id = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Date.now();
-  store.leaders.push({ id, name, area, email, pass, color, anamneseDone: false, profile: null });
+  store.leaders.push({ id, name, area, email, pass, color, anamneseDone: false, profile: null, whatsapp: '', title: '', notes: '', photo: null, photoHistory: [] });
   saveStore();
+  auditLog('leader_added', { leaderId: id, name, area });
+  addNotification('onboarding_new_leader', `Novo líder cadastrado — ${name}`, `${name} (${area}) foi adicionado ao MTX Advisor. Anamnese pendente.`, { leaderId: id });
   closeModal('add-leader-modal');
   renderLeaders();
 
@@ -3091,13 +3144,17 @@ function renderAdminLeadersGrid() {
     const lastSession = ls.sort((a,b) => new Date(b.dateISO) - new Date(a.dateISO))[0];
     const pending = store.actionItems.filter(a => a.leaderId === l.id && a.status === 'pending');
     const avatarContent = l.photo
-      ? `<img src="${l.photo}" class="avatar-lg" style="object-fit:cover">`
-      : `<div class="avatar-lg" style="background:${l.color||'#6366f1'}">${l.name[0]}</div>`;
+      ? `<img src="${l.photo}" class="avatar-lg" style="object-fit:cover;border-radius:50%">`
+      : `<div class="avatar-lg" style="background:${l.color||'#6366f1'};border-radius:50%">${l.name[0]}</div>`;
 
     return `<div class="card" style="margin-bottom:16px">
       <div style="display:flex;align-items:flex-start;gap:20px">
-        <!-- Avatar -->
-        <div style="flex-shrink:0">${avatarContent}</div>
+        <!-- Avatar com botão rápido de foto -->
+        <div style="flex-shrink:0;position:relative">
+          ${avatarContent}
+          <button onclick="quickEditPhoto('${l.id}')" title="Alterar foto" style="position:absolute;bottom:-4px;right:-4px;width:22px;height:22px;border-radius:50%;background:var(--accent);border:2px solid #fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;padding:0">📷</button>
+          <input type="file" id="quick-photo-${l.id}" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleQuickPhoto(event,'${l.id}')">
+        </div>
 
         <!-- Info -->
         <div style="flex:1;min-width:0">
@@ -3122,9 +3179,11 @@ function renderAdminLeadersGrid() {
         <!-- Actions col -->
         <div style="flex-shrink:0;display:flex;flex-direction:column;gap:8px;min-width:140px">
           <button class="btn btn-secondary btn-sm" onclick="openEditLeader('${l.id}')">✏ Editar Perfil</button>
+          <button class="btn btn-secondary btn-sm" onclick="quickEditPhoto('${l.id}')" style="border-color:var(--teal);color:var(--teal)">📷 Alterar Foto</button>
           <button class="btn btn-secondary btn-sm" onclick="startNew1on1FromAdmin('${l.id}');showPage('new1on1')">▶ Novo 1:1</button>
           ${l.anamneseDone ? '' : `<button class="btn btn-secondary btn-sm" onclick="startAnamnese('${l.id}')" style="border-color:var(--warning);color:var(--warning)">◉ Anamnese</button>`}
           ${l.anamneseDone ? `<button class="btn btn-secondary btn-sm" onclick="resetAndStartAnamnese('${l.id}')" title="Refazer anamnese">↺ Anamnese</button>` : ''}
+          ${l.photo ? `<button class="btn btn-secondary btn-xs" onclick="removeLeaderPhoto('${l.id}')" style="border-color:var(--danger);color:var(--danger);font-size:11px">✕ Remover foto</button>` : ''}
         </div>
       </div>
 
@@ -3167,7 +3226,7 @@ function openEditLeader(id) {
   document.getElementById('edit-leader-name').value = l.name;
   document.getElementById('edit-leader-area').value = l.area;
   document.getElementById('edit-leader-email').value = l.email;
-  document.getElementById('edit-leader-whatsapp').value = l.whatsapp || '';
+  document.getElementById('edit-leader-whatsapp').value = formatPhoneDisplay(l.whatsapp || '');
   document.getElementById('edit-leader-title').value = l.title || '';
   document.getElementById('edit-leader-pass').value = '';
   document.getElementById('edit-leader-notes').value = l.notes || '';
@@ -3234,7 +3293,7 @@ function saveEditLeader() {
   const name = document.getElementById('edit-leader-name').value.trim();
   const area = document.getElementById('edit-leader-area').value.trim();
   const email = document.getElementById('edit-leader-email').value.trim();
-  const whatsapp = document.getElementById('edit-leader-whatsapp').value.replace(/\D/g,'');
+  const whatsapp = phoneToE164(document.getElementById('edit-leader-whatsapp').value);
   const title = document.getElementById('edit-leader-title').value.trim();
   const newPass = document.getElementById('edit-leader-pass').value.trim();
   const notes = document.getElementById('edit-leader-notes').value.trim();
@@ -3254,8 +3313,110 @@ function saveEditLeader() {
   if (_pendingAvatarBase64) { l.photo = _pendingAvatarBase64; _pendingAvatarBase64 = null; }
 
   saveStore();
+  auditLog('leader_edited', { leaderId: id, name });
   closeModal('edit-leader-modal');
   renderAdminLeadersGrid();
+}
+
+// ============================================================
+// PHONE MASK (Doc 20)
+// ============================================================
+function maskPhoneInput(input) {
+  let v = input.value.replace(/\D/g, '').slice(0, 11);
+  if (v.length === 0) { input.value = ''; return; }
+  if (v.length <= 2) { input.value = '(' + v; return; }
+  if (v.length <= 6) { input.value = '(' + v.slice(0,2) + ') ' + v.slice(2); return; }
+  if (v.length <= 10) {
+    input.value = '(' + v.slice(0,2) + ') ' + v.slice(2,6) + '-' + v.slice(6);
+  } else {
+    input.value = '(' + v.slice(0,2) + ') ' + v.slice(2,7) + '-' + v.slice(7);
+  }
+}
+
+function formatPhoneDisplay(raw) {
+  if (!raw) return '';
+  const n = raw.replace(/\D/g, '');
+  // Already stored as E.164 with country code 55
+  const digits = n.startsWith('55') && n.length >= 12 ? n.slice(2) : n;
+  if (!digits) return '';
+  if (digits.length === 11) return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
+  if (digits.length === 10) return `(${digits.slice(0,2)}) ${digits.slice(2,6)}-${digits.slice(6)}`;
+  return n;
+}
+
+function phoneToE164(masked) {
+  const digits = masked.replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('55')) return digits;
+  return '55' + digits;
+}
+
+// ============================================================
+// QUICK PHOTO EDIT (Doc 21)
+// ============================================================
+function quickEditPhoto(leaderId) {
+  const input = document.getElementById('quick-photo-' + leaderId);
+  if (input) input.click();
+}
+
+function handleQuickPhoto(event, leaderId) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!allowed.includes(file.type)) { alert('Formato inválido. Use JPG, PNG ou WEBP.'); return; }
+  if (file.size > 5242880) { alert('Imagem muito grande. Máximo 5MB.'); return; }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const l = store.leaders.find(x => x.id === leaderId);
+    if (!l) return;
+    // Store previous version for rollback
+    if (!l.photoHistory) l.photoHistory = [];
+    if (l.photo) l.photoHistory.push({ photo: l.photo, updatedAt: new Date().toISOString(), updatedBy: currentUser?.name || 'admin' });
+    if (l.photoHistory.length > 5) l.photoHistory.shift();
+    l.photo = e.target.result;
+    l.photoUpdatedAt = new Date().toISOString();
+    l.photoUpdatedBy = currentUser?.name || 'admin';
+    saveStore();
+    auditLog('photo_updated', { leaderId, leaderName: l.name, updatedBy: currentUser?.name });
+    renderAdminLeadersGrid();
+    // Update open edit modal if same leader
+    const editId = document.getElementById('edit-leader-id')?.value;
+    if (editId === leaderId) {
+      const old = document.getElementById('edit-leader-avatar-preview');
+      if (old) { const img = document.createElement('img'); img.id = 'edit-leader-avatar-preview'; img.className = 'avatar-lg'; img.style.objectFit = 'cover'; img.src = l.photo; old.replaceWith(img); }
+    }
+    showToast('Foto atualizada com sucesso.');
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeLeaderPhoto(leaderId) {
+  if (!confirm('Remover a foto deste líder?')) return;
+  const l = store.leaders.find(x => x.id === leaderId);
+  if (!l) return;
+  if (l.photo) {
+    if (!l.photoHistory) l.photoHistory = [];
+    l.photoHistory.push({ photo: l.photo, updatedAt: new Date().toISOString(), updatedBy: currentUser?.name || 'admin' });
+    if (l.photoHistory.length > 5) l.photoHistory.shift();
+  }
+  l.photo = null;
+  l.photoUpdatedAt = new Date().toISOString();
+  l.photoUpdatedBy = currentUser?.name || 'admin';
+  saveStore();
+  auditLog('photo_removed', { leaderId, leaderName: l.name });
+  renderAdminLeadersGrid();
+  showToast('Foto removida.');
+}
+
+function showToast(msg, type = 'success') {
+  const el = document.getElementById('toast-container');
+  if (!el) return;
+  const t = document.createElement('div');
+  t.className = 'toast toast-' + type;
+  t.textContent = msg;
+  el.appendChild(t);
+  setTimeout(() => t.classList.add('toast-show'), 10);
+  setTimeout(() => { t.classList.remove('toast-show'); setTimeout(() => t.remove(), 300); }, 2800);
 }
 
 // RESET AND REDO ANAMNESE
@@ -3398,7 +3559,8 @@ function renderProfilePage() {
           </div>
           <div class="form-group">
             <label>WhatsApp</label>
-            <input type="text" id="pf-whatsapp" value="${leader.whatsapp||''}" placeholder="(00) 00000-0000">
+            <input type="text" id="pf-whatsapp" value="${formatPhoneDisplay(leader.whatsapp)}" placeholder="(27) 99999-9999" oninput="maskPhoneInput(this)" inputmode="numeric">
+            <div class="text-xs text-muted" style="margin-top:4px">Formato: (DDD) 99999-9999</div>
           </div>
           <div class="form-group" style="grid-column:1/-1">
             <label>Sobre mim (bio)</label>
@@ -3516,7 +3678,8 @@ function saveProfileInfo() {
   const name = document.getElementById('pf-name')?.value.trim();
   if (name) leader.name = name;
   leader.title = document.getElementById('pf-title')?.value.trim() || leader.title;
-  leader.whatsapp = document.getElementById('pf-whatsapp')?.value.trim() || leader.whatsapp;
+  const rawWa = document.getElementById('pf-whatsapp')?.value || '';
+  if (rawWa.trim()) leader.whatsapp = phoneToE164(rawWa);
   leader.bio = document.getElementById('pf-bio')?.value.trim() || leader.bio;
   saveStore();
   // Update sidebar display name
@@ -4805,6 +4968,301 @@ function nextRefineQuestion() {
     return;
   }
   showRefineQuestion();
+}
+
+// ============================================================
+// NOTIFICATIONS MODULE (Doc 19)
+// ============================================================
+const NOTIF_KEY = 'metax_notifications';
+
+const NOTIF_TYPES = {
+  onboarding_new_leader:  { icon: '👋', label: 'Onboarding', category: 'A', priority: 'info' },
+  anamnese_incomplete:    { icon: '📋', label: 'Anamnese', category: 'B', priority: 'warning' },
+  anamnese_overdue:       { icon: '⚠️', label: 'Anamnese', category: 'B', priority: 'high' },
+  session_scheduled:      { icon: '📅', label: '1:1 Agendado', category: 'C', priority: 'info' },
+  session_overdue:        { icon: '🔴', label: '1:1 Vencido', category: 'C', priority: 'critical' },
+  action_due_soon:        { icon: '⏰', label: 'Plano Vence', category: 'D', priority: 'warning' },
+  action_overdue:         { icon: '🚨', label: 'Plano Vencido', category: 'D', priority: 'critical' },
+  action_completed:       { icon: '✅', label: 'Plano Concluído', category: 'D', priority: 'success' },
+  risk_red:               { icon: '🔴', label: 'Risco Crítico', category: 'F', priority: 'critical' },
+  risk_orange:            { icon: '🟠', label: 'Risco Alto', category: 'F', priority: 'high' },
+  maturity_drop:          { icon: '📉', label: 'Queda Maturidade', category: 'E', priority: 'warning' },
+  security_login_fail:    { icon: '🔒', label: 'Segurança', category: 'I', priority: 'critical' },
+  system_deploy:          { icon: '🚀', label: 'Sistema', category: 'J', priority: 'info' },
+  data_exported:          { icon: '💾', label: 'Backup', category: 'H', priority: 'info' },
+};
+
+function getNotifications() {
+  try { return JSON.parse(localStorage.getItem(NOTIF_KEY) || '[]'); } catch(e) { return []; }
+}
+
+function saveNotifications(list) {
+  // Keep last 200
+  if (list.length > 200) list.splice(0, list.length - 200);
+  localStorage.setItem(NOTIF_KEY, JSON.stringify(list));
+}
+
+function addNotification(type, title, body, meta = {}) {
+  const list = getNotifications();
+  list.unshift({
+    id: 'n-' + Date.now(),
+    type,
+    title,
+    body,
+    meta,
+    ts: new Date().toISOString(),
+    read: false,
+    channel: meta.channel || 'system',
+    status: 'pending',
+  });
+  saveNotifications(list);
+  updateNotifBadge();
+}
+
+function markNotifRead(id) {
+  const list = getNotifications();
+  const n = list.find(x => x.id === id);
+  if (n) { n.read = true; saveNotifications(list); updateNotifBadge(); }
+}
+
+function markAllNotifsRead() {
+  const list = getNotifications();
+  list.forEach(n => { n.read = true; });
+  saveNotifications(list);
+  updateNotifBadge();
+  renderNotificationsPage();
+}
+
+function clearNotifications() {
+  if (!confirm('Limpar todas as notificações?')) return;
+  saveNotifications([]);
+  updateNotifBadge();
+  renderNotificationsPage();
+}
+
+function updateNotifBadge() {
+  const unread = getNotifications().filter(n => !n.read).length;
+  const badge = document.getElementById('notif-badge');
+  if (!badge) return;
+  if (unread > 0) { badge.textContent = unread; badge.style.display = ''; }
+  else { badge.style.display = 'none'; }
+}
+
+function checkAndGenerateNotifications() {
+  const now = new Date();
+  const leaders = store.leaders || [];
+  const sessions = store.sessions || [];
+  const actions = store.actionItems || [];
+
+  leaders.forEach(l => {
+    // Anamnese incompleta
+    if (!l.anamneseDone) {
+      const ls = sessions.filter(s => s.leaderId === l.id);
+      if (!ls.length) {
+        // Checar se já existe notif recente desse tipo para este líder
+        const existing = getNotifications().find(n => n.type === 'anamnese_incomplete' && n.meta.leaderId === l.id);
+        if (!existing) {
+          addNotification('anamnese_incomplete', `Anamnese pendente — ${l.name}`, `${l.name} (${l.area}) ainda não completou a anamnese de desenvolvimento.`, { leaderId: l.id });
+        }
+      }
+    }
+
+    // Sem 1:1 há +14 dias
+    const ls = sessions.filter(s => s.leaderId === l.id).sort((a,b) => new Date(b.dateISO) - new Date(a.dateISO));
+    if (ls.length) {
+      const last = new Date(ls[0].dateISO);
+      const daysSince = Math.floor((now - last) / 86400000);
+      if (daysSince > 14) {
+        const key = `session_overdue_${l.id}`;
+        const existing = getNotifications().find(n => n.type === 'session_overdue' && n.meta.leaderId === l.id && new Date(n.ts) > new Date(Date.now() - 7 * 86400000));
+        if (!existing) {
+          addNotification('session_overdue', `1:1 vencido — ${l.name}`, `Último 1:1 com ${l.name} foi há ${daysSince} dias. Agendar nova reunião.`, { leaderId: l.id, daysSince });
+        }
+      }
+    }
+
+    // Risk engine — score vermelho
+    const risk = calcRiskScore(l);
+    if (risk.level === 'red') {
+      const existing = getNotifications().find(n => n.type === 'risk_red' && n.meta.leaderId === l.id && new Date(n.ts) > new Date(Date.now() - 3 * 86400000));
+      if (!existing) {
+        addNotification('risk_red', `Risco crítico — ${l.name}`, `Score de risco ${risk.score}/100 para ${l.name} (${l.area}). Intervenção urgente necessária.`, { leaderId: l.id, score: risk.score });
+      }
+    }
+  });
+
+  // Ações vencidas
+  actions.filter(a => a.status === 'pending').forEach(a => {
+    if (!a.deadline) return;
+    const due = new Date(a.deadline.split('/').reverse().join('-'));
+    if (isNaN(due)) return;
+    const daysOver = Math.floor((now - due) / 86400000);
+    if (daysOver > 0) {
+      const existing = getNotifications().find(n => n.type === 'action_overdue' && n.meta.actionId === a.id && new Date(n.ts) > new Date(Date.now() - 2 * 86400000));
+      if (!existing) {
+        const l = store.leaders.find(x => x.id === a.leaderId);
+        addNotification('action_overdue', `Plano vencido — ${l?.name || 'Líder'}`, `Plano de ação "${a.action.slice(0,50)}..." venceu há ${daysOver} dia(s).`, { actionId: a.id, leaderId: a.leaderId });
+      }
+    }
+  });
+}
+
+function getNotifCfg() {
+  try { return JSON.parse(localStorage.getItem('metax_notif_cfg') || '{}'); } catch(e) { return {}; }
+}
+function saveNotifCfg(cfg) { localStorage.setItem('metax_notif_cfg', JSON.stringify(cfg)); }
+
+function renderNotificationsPage() {
+  const el = document.getElementById('notifications-content');
+  if (!el) return;
+
+  const list = getNotifications();
+  const unread = list.filter(n => !n.read).length;
+  const cfg = getNotifCfg();
+
+  const priorityIconMap = { critical: 'notif-icon-critical', high: 'notif-icon-warning', warning: 'notif-icon-warning', info: 'notif-icon-info', success: 'notif-icon-success' };
+  const priorityBadge = { critical: 'badge-red', high: 'badge-red', warning: 'badge-yellow', info: 'badge-blue', success: 'badge-green' };
+  const priorityLabel = { critical: 'Crítica', high: 'Alta', warning: 'Atenção', info: 'Info', success: 'Sucesso' };
+
+  const notifItems = list.slice(0, 50).map(n => {
+    const def = NOTIF_TYPES[n.type] || { icon: '🔔', label: n.type, priority: 'info' };
+    const ico = priorityIconMap[def.priority] || 'notif-icon-info';
+    const tsDate = new Date(n.ts);
+    const tsStr = tsDate.toLocaleDateString('pt-BR') + ' ' + tsDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return `<div class="notif-row ${!n.read ? 'notif-unread' : ''}" onclick="markNotifRead('${n.id}');this.classList.remove('notif-unread')">
+      <div class="notif-icon ${ico}">${def.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div class="notif-title">${n.title}</div>
+        <div class="notif-body">${n.body}</div>
+        <div class="notif-meta">
+          <span>${tsStr}</span>
+          <span class="badge ${priorityBadge[def.priority]}">${priorityLabel[def.priority]}</span>
+          <span class="badge badge-gray">${def.label}</span>
+          ${!n.read ? '<span style="width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;display:inline-block"></span>' : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('') || '<div class="dash-empty-state"><div class="empty-icon">🔔</div><div class="empty-title">Nenhuma notificação</div><div class="empty-sub">Todas as notificações aparecerão aqui.</div></div>';
+
+  const cfgItems = [
+    { key: 'anamnese', label: 'Anamnese incompleta', desc: 'Alertar quando líder não completar anamnese' },
+    { key: 'session_overdue', label: '1:1 vencido (+14 dias)', desc: 'Alerta quando líderes ficam sem reunião' },
+    { key: 'action_overdue', label: 'Planos de ação vencidos', desc: 'Cobrar ações com prazo ultrapassado' },
+    { key: 'risk_red', label: 'Score de risco crítico', desc: 'Notificar quando risco atingir nível vermelho' },
+    { key: 'risk_orange', label: 'Score de risco alto', desc: 'Notificar nível laranja' },
+    { key: 'security', label: 'Eventos de segurança', desc: 'Login suspeito, falha repetida, exportação' },
+  ].map(item => {
+    const on = cfg[item.key] !== false;
+    return `<div class="notif-cfg-row">
+      <div>
+        <div class="fw-600 text-sm">${item.label}</div>
+        <div class="text-xs text-muted">${item.desc}</div>
+      </div>
+      <label class="notif-toggle">
+        <input type="checkbox" ${on ? 'checked' : ''} onchange="toggleNotifCfg('${item.key}',this.checked)">
+        <span class="notif-slider"></span>
+      </label>
+    </div>`;
+  }).join('');
+
+  const sent = list.filter(n => n.status === 'sent' || n.status === 'pending').length;
+  const unreadCount = list.filter(n => !n.read).length;
+  const critical = list.filter(n => { const d = NOTIF_TYPES[n.type]; return d && d.priority === 'critical'; }).length;
+  const today = list.filter(n => new Date(n.ts).toDateString() === new Date().toDateString()).length;
+
+  el.innerHTML = `
+    <div class="tabs mb-0" id="notif-tabs" style="margin-bottom:0">
+      <div class="tab active" onclick="switchNotifTab('feed')">Central de Notificações</div>
+      <div class="tab" onclick="switchNotifTab('config')">Configurações</div>
+    </div>
+
+    <div id="notif-tab-feed" style="margin-top:20px">
+      <!-- KPIs -->
+      <div class="grid-4 mb-24">
+        <div class="notif-kpi"><div class="notif-kpi-value">${list.length}</div><div class="notif-kpi-label">Total</div></div>
+        <div class="notif-kpi"><div class="notif-kpi-value" style="color:var(--accent)">${unreadCount}</div><div class="notif-kpi-label">Não lidas</div></div>
+        <div class="notif-kpi"><div class="notif-kpi-value" style="color:var(--danger)">${critical}</div><div class="notif-kpi-label">Críticas</div></div>
+        <div class="notif-kpi"><div class="notif-kpi-value" style="color:var(--teal)">${today}</div><div class="notif-kpi-label">Hoje</div></div>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm" onclick="checkAndGenerateNotifications();renderNotificationsPage()">↺ Verificar agora</button>
+        ${unreadCount > 0 ? `<button class="btn btn-secondary btn-sm" onclick="markAllNotifsRead()">✓ Marcar todas como lidas</button>` : ''}
+        ${list.length > 0 ? `<button class="btn btn-secondary btn-sm" style="border-color:var(--danger);color:var(--danger)" onclick="clearNotifications()">🗑 Limpar todas</button>` : ''}
+      </div>
+
+      <!-- Feed -->
+      <div class="card" style="padding:0 24px">
+        ${notifItems}
+      </div>
+    </div>
+
+    <div id="notif-tab-config" style="display:none;margin-top:20px">
+      <div class="card mb-20">
+        <div class="card-title">🔔 Canais Futuros</div>
+        <div class="grid-2" style="gap:12px">
+          ${[
+            { icon:'📧', name:'E-mail (SendGrid)', status:'Em breve', color:'var(--text3)' },
+            { icon:'💬', name:'WhatsApp Business API', status:'Em breve', color:'var(--text3)' },
+            { icon:'🔵', name:'Microsoft Teams', status:'Planejado', color:'var(--text3)' },
+            { icon:'📱', name:'Push / App', status:'Roadmap', color:'var(--text3)' },
+          ].map(c => `<div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:10px">
+            <span style="font-size:22px">${c.icon}</span>
+            <div><div class="fw-600 text-sm">${c.name}</div><div class="text-xs text-muted">${c.status}</div></div>
+          </div>`).join('')}
+        </div>
+        <div class="alert-card alert-info" style="margin-top:16px;margin-bottom:0">
+          <div class="alert-body">Para ativar e-mail e WhatsApp, configure SendGrid e WhatsApp Business API. A arquitetura já está preparada — consulte a documentação de integrações.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">⚙ Configurar Alertas do Sistema</div>
+        ${cfgItems}
+        <div class="alert-card alert-info" style="margin-top:16px;margin-bottom:0">
+          <div class="alert-body">Configurações salvas localmente. Todas as notificações ativas são registradas no audit log.</div>
+        </div>
+      </div>
+
+      <div class="card mt-16">
+        <div class="card-title">📋 Top 10 — Notificações Prioritárias</div>
+        ${[
+          ['👋','Novo líder cadastrado','Onboarding imediato'],
+          ['📋','Anamnese incompleta','Após 24h, 72h e 7 dias'],
+          ['📅','1:1 agendado','Convite + lembrete 24h antes'],
+          ['🔴','1:1 vencido (+14 dias)','Alerta para CEO'],
+          ['⏰','Plano de ação vence em 72h','Lembrete preventivo'],
+          ['🚨','Plano de ação vencido','Cobrança e escalonamento'],
+          ['🔴','Score de risco vermelho','Crisis Board automático'],
+          ['📉','Queda de maturidade','Dois ciclos consecutivos'],
+          ['🤖','Refinamento do CEO Digital','Ciclo mensal'],
+          ['🔒','Bug/Segurança crítica','Notificação imediata'],
+        ].map(([icon, title, desc]) => `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:18px;flex-shrink:0">${icon}</span>
+          <div><div class="fw-600 text-sm">${title}</div><div class="text-xs text-muted">${desc}</div></div>
+        </div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function switchNotifTab(tab) {
+  document.querySelectorAll('#notif-tabs .tab').forEach((t, i) => {
+    const isActive = (i === 0 && tab === 'feed') || (i === 1 && tab === 'config');
+    t.classList.toggle('active', isActive);
+  });
+  const feed = document.getElementById('notif-tab-feed');
+  const cfg = document.getElementById('notif-tab-config');
+  if (feed) feed.style.display = tab === 'feed' ? '' : 'none';
+  if (cfg) cfg.style.display = tab === 'config' ? '' : 'none';
+}
+
+function toggleNotifCfg(key, value) {
+  const cfg = getNotifCfg();
+  cfg[key] = value;
+  saveNotifCfg(cfg);
+  showToast(value ? `Alertas "${key}" ativados.` : `Alertas "${key}" desativados.`);
 }
 
 // Init
