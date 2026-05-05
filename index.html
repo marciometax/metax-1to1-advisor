@@ -341,13 +341,41 @@
     .page { padding: 16px; }
     .mobile-menu-btn { display:block; }
     .topbar { padding: 0 16px; }
+    /* Dashboard mobile */
+    .metric-card { min-width: 0; width: 100%; }
+    #dash-leader-map { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    #dash-leader-map table { min-width: 600px; }
+    .card { overflow: visible; }
+    #page-dashboard { overflow-y: auto; }
+    #dash-marcio, #dash-leader { display: block !important; }
+    #dash-marcio > .grid-2 { gap: 14px; }
   }
   @media (max-width: 480px) {
     .auth-card { padding: 28px 20px; }
     .anamnese-question { font-size: 17px; }
     .btn { font-size: 14px; }
     .metric-value { font-size: 26px; }
+    /* Dashboard mobile pequeno */
+    .metric-card { padding: 16px; }
+    .metric-label { font-size: 11px; }
+    .metric-value { font-size: 22px; }
   }
+
+  /* Skeleton loader */
+  @keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%);
+    background-size: 800px 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: 8px;
+  }
+  .skeleton-metric { height: 90px; border-radius: 12px; }
+  .skeleton-row { height: 20px; margin-bottom: 10px; border-radius: 6px; }
+  .skeleton-row.short { width: 60%; }
+  .dash-empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; text-align:center; color:var(--text3); }
+  .dash-empty-state .empty-icon { font-size:36px; margin-bottom:12px; }
+  .dash-empty-state .empty-title { font-size:15px; font-weight:600; color:var(--text2); margin-bottom:6px; }
+  .dash-empty-state .empty-sub { font-size:13px; }
 </style>
 </head>
 <body>
@@ -1199,7 +1227,7 @@ function renderAdminDashboard() {
   const alertEl = document.getElementById('dash-alerts-list');
   const recentAlerts = store.alerts.slice(-5).reverse();
   if (!recentAlerts.length) {
-    alertEl.innerHTML = '<p class="text-sm text-muted">Nenhum alerta no momento.</p>';
+    alertEl.innerHTML = '<div class="dash-empty-state"><div class="empty-icon">✔</div><div class="empty-title">Sem alertas ativos</div><div class="empty-sub">Tudo certo por aqui.</div></div>';
   } else {
     alertEl.innerHTML = recentAlerts.map(a => `
       <div class="alert-card ${a.level === 'critical' ? 'alert-critical' : a.level === 'warning' ? 'alert-warning' : 'alert-info'}" style="margin-bottom:12px">
@@ -1213,7 +1241,7 @@ function renderAdminDashboard() {
   const recentEl = document.getElementById('dash-recent-meetings');
   const recentSessions = sessions.slice(-5).reverse();
   if (!recentSessions.length) {
-    recentEl.innerHTML = '<p class="text-sm text-muted">Nenhuma reunião ainda.</p>';
+    recentEl.innerHTML = '<div class="dash-empty-state"><div class="empty-icon">◷</div><div class="empty-title">Nenhuma reunião registrada</div><div class="empty-sub">Inicie o primeiro 1:1 para ver o histórico aqui.</div></div>';
   } else {
     recentEl.innerHTML = recentSessions.map(s => {
       const leader = store.leaders.find(l => l.id === s.leaderId);
@@ -1230,17 +1258,24 @@ function renderAdminDashboard() {
     }).join('');
   }
 
-  // Leader map
+  // Leader map — versão unificada com Risk Engine
   const mapEl = document.getElementById('dash-leader-map');
-  mapEl.innerHTML = `<table><thead><tr><th>Líder</th><th>Área</th><th>Reuniões</th><th>Planos Pendentes</th><th>Execução</th><th>Maturidade</th><th></th></tr></thead><tbody>${
+  if (!store.leaders.length) {
+    mapEl.innerHTML = '<div class="dash-empty-state"><div class="empty-icon">◈</div><div class="empty-title">Nenhum líder cadastrado</div><div class="empty-sub">Acesse Administração para adicionar líderes.</div></div>';
+  } else {
+  mapEl.innerHTML = `<div style="overflow-x:auto"><table style="width:100%"><thead><tr>
+    <th>Líder</th><th>Área</th><th>Reuniões</th><th>Planos</th><th>Execução</th><th>Maturidade</th><th>Risco</th><th></th>
+  </tr></thead><tbody>${
     store.leaders.map(l => {
       const ls = sessions.filter(s => s.leaderId === l.id);
       const lp = store.actionItems.filter(a => a.leaderId === l.id && a.status === 'pending');
       const ld = store.actionItems.filter(a => a.leaderId === l.id && a.status === 'done');
       const total = lp.length + ld.length;
       const execPct = total > 0 ? Math.round((ld.length / total) * 100) : 0;
-      const maturity = l.profile ? (l.profile.maturityLevel || 'Inicial') : '—';
+      const matKey = inferMaturityLevel(l);
+      const mat = MATURITY_LEVELS[matKey];
       const execColor = execPct >= 80 ? '#22c55e' : execPct >= 50 ? '#f59e0b' : '#ef4444';
+      const risk = calcRiskScore(l);
       return `<tr>
         <td><div class="flex items-center gap-8"><div class="user-avatar" style="background:${l.color};width:28px;height:28px;font-size:12px">${l.name[0]}</div><span class="fw-600">${l.name}</span></div></td>
         <td class="text-muted">${l.area}</td>
@@ -1252,11 +1287,20 @@ function renderAdminDashboard() {
             <span class="text-sm" style="color:${execColor}">${execPct}%</span>
           </div>
         </td>
-        <td><span class="badge ${maturity === 'Avançado' ? 'badge-green' : maturity === 'Intermediário' ? 'badge-blue' : maturity === 'Inicial' ? 'badge-yellow' : 'badge-gray'}">${maturity}</span></td>
-        <td><button class="btn btn-secondary btn-sm" onclick="startNew1on1FromAdmin('${l.id}')">Iniciar 1:1</button></td>
+        <td><span class="badge ${mat.badge}" style="font-size:11px">${matKey}</span></td>
+        <td>${getRiskHtml(risk)}</td>
+        <td>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-secondary btn-sm" onclick="startNew1on1FromAdmin('${l.id}')">1:1</button>
+            <button class="btn btn-secondary btn-sm" onclick="showPage('timeline');renderLeaderTimeline('${l.id}')">◷</button>
+          </div>
+        </td>
       </tr>`;
     }).join('')
-  }</tbody></table>`;
+  }</tbody></table></div>`;
+  } // end else leaders
+
+  updateCrisisBadge();
 }
 
 // ============================================================
@@ -3883,58 +3927,6 @@ function inferMaturityLevel(leader) {
   return 'D1';
 }
 
-// ============================================================
-// ENRICH renderAdminDashboard com Risk Engine
-// ============================================================
-const _origRenderAdminDashboard = renderAdminDashboard;
-function renderAdminDashboard() {
-  _origRenderAdminDashboard();
-  // Adiciona coluna de risco no mapa de líderes
-  enrichLeaderMapWithRisk();
-  updateCrisisBadge();
-}
-
-function enrichLeaderMapWithRisk() {
-  const mapEl = document.getElementById('dash-leader-map');
-  if (!mapEl) return;
-  // Reconstruir tabela com coluna de risco
-  const sessions = store.sessions;
-  mapEl.innerHTML = `<div style="overflow-x:auto"><table style="width:100%"><thead><tr>
-    <th>Líder</th><th>Área</th><th>Reuniões</th><th>Planos</th><th>Execução</th><th>Maturidade</th><th>Risco</th><th></th>
-  </tr></thead><tbody>${
-    store.leaders.map(l => {
-      const ls = sessions.filter(s => s.leaderId === l.id);
-      const lp = store.actionItems.filter(a => a.leaderId === l.id && a.status === 'pending');
-      const ld = store.actionItems.filter(a => a.leaderId === l.id && a.status === 'done');
-      const total = lp.length + ld.length;
-      const execPct = total > 0 ? Math.round((ld.length / total) * 100) : 0;
-      const matKey = inferMaturityLevel(l);
-      const mat = MATURITY_LEVELS[matKey];
-      const execColor = execPct >= 80 ? '#22c55e' : execPct >= 50 ? '#f59e0b' : '#ef4444';
-      const risk = calcRiskScore(l);
-      return `<tr>
-        <td><div class="flex items-center gap-8"><div class="user-avatar" style="background:${l.color};width:28px;height:28px;font-size:12px">${l.name[0]}</div><span class="fw-600">${l.name}</span></div></td>
-        <td class="text-muted">${l.area}</td>
-        <td>${ls.length}</td>
-        <td>${lp.length > 0 ? `<span class="badge badge-yellow">${lp.length}</span>` : '<span class="badge badge-green">0</span>'}</td>
-        <td>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div class="progress-bar" style="width:80px"><div class="progress-fill" style="width:${execPct}%;background:${execColor}"></div></div>
-            <span class="text-sm" style="color:${execColor}">${execPct}%</span>
-          </div>
-        </td>
-        <td><span class="badge ${mat.badge}" style="font-size:11px">${matKey}</span></td>
-        <td>${getRiskHtml(risk)}</td>
-        <td>
-          <div style="display:flex;gap:4px">
-            <button class="btn btn-secondary btn-sm" onclick="startNew1on1FromAdmin('${l.id}')">1:1</button>
-            <button class="btn btn-secondary btn-sm" onclick="showPage('timeline');renderLeaderTimeline('${l.id}')">◷</button>
-          </div>
-        </td>
-      </tr>`;
-    }).join('')
-  }</tbody></table></div>`;
-}
 
 // ============================================================
 // UTILS
