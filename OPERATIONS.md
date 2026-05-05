@@ -117,4 +117,4 @@ O botão **⬇ Backup** na sidebar exporta um arquivo `metax-backup-YYYY-MM-DD.j
 
 ---
 
-*Última atualização: 2026-05-05 — v1.2.0*
+*Última atualização: 2026-05-05 — v2.0.0*
