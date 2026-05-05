@@ -35,7 +35,14 @@
   #auth-screen::before { content:''; position:fixed; inset:0; background: radial-gradient(ellipse at 20% 50%, rgba(14,165,233,.08) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(16,185,129,.06) 0%, transparent 50%); pointer-events:none; }
   .auth-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 40px 32px; width: 100%; max-width: 420px; position:relative; z-index:1; box-shadow: 0 24px 80px rgba(0,0,0,.6); }
   .auth-logo { text-align: center; margin-bottom: 32px; }
-  .auth-logo .logo-mark { width:56px; height:56px; border-radius:14px; background:var(--grad1); display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:24px; font-weight:800; color:#fff; letter-spacing:-1px; box-shadow:0 8px 24px rgba(14,165,233,.35); }
+  .auth-logo .logo-img-wrap { display:flex; justify-content:center; margin-bottom:16px; }
+  .auth-logo .logo-img-wrap img {
+    height:64px; width:auto;
+    background: #fff;
+    border-radius: 14px;
+    padding: 10px 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.06);
+  }
   .auth-logo .brand { font-size:20px; font-weight:800; color:var(--text); letter-spacing:-0.5px; }
   .auth-logo .sub { font-size:13px; color:var(--text3); margin-top:4px; }
   .form-group { margin-bottom: 18px; }
@@ -61,7 +68,10 @@
   .sidebar { width: 256px; background: var(--surface); border-right: 1px solid var(--border); position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; z-index: 200; display: flex; flex-direction: column; transition: transform .3s; }
   .sidebar-header { padding: 20px 18px 14px; border-bottom: 1px solid var(--border); }
   .sidebar-brand-wrap { display:flex; align-items:center; gap:10px; }
-  .sidebar-logo-mark { width:34px; height:34px; border-radius:9px; background:var(--grad1); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; color:#fff; flex-shrink:0; }
+  .sidebar-logo-mark { display:flex; align-items:center; flex-shrink:0; }
+  .sidebar-logo-mtx { font-size:20px; font-weight:900; color:#3b82f6; letter-spacing:-1px; line-height:1; }
+  .sidebar-logo-mtx span { color:#3b82f6; }
+  .sidebar-logo-advisor { background:#2a9d8f; color:#fff; font-size:10px; font-weight:800; padding:2px 7px; border-radius:20px; margin-left:5px; letter-spacing:0.5px; text-transform:uppercase; line-height:1.6; }
   .sidebar-brand { font-size: 16px; font-weight: 800; color: var(--text); letter-spacing:-.3px; }
   .sidebar-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
   .sidebar-user { padding: 14px 18px; border-bottom: 1px solid var(--border); }
@@ -316,7 +326,10 @@
   .maturity-d4 { background:rgba(16,185,129,.1); color:#10b981; border:1px solid rgba(16,185,129,.3); }
 
   /* META.X BRAND ELEMENTS */
-  .metax-badge { display:inline-flex; align-items:center; gap:6px; background:rgba(14,165,233,.08); border:1px solid rgba(14,165,233,.2); border-radius:6px; padding:3px 10px; font-size:11px; color:var(--accent2); font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
+  .metax-badge { display:inline-flex; align-items:center; gap:4px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:8px; padding:3px 10px; font-size:13px; font-weight:900; letter-spacing:-0.5px; }
+  .metax-badge .b-mtx { color:#3b82f6; }
+  .metax-badge .b-x { color:#2a9d8f; }
+  .metax-badge .b-advisor { background:#2a9d8f; color:#fff; font-size:9px; font-weight:800; padding:1px 6px; border-radius:20px; margin-left:3px; text-transform:uppercase; letter-spacing:.4px; }
   .data-grid { display:grid; gap:1px; background:var(--border); border-radius:10px; overflow:hidden; }
   .data-row { background:var(--surface2); padding:12px 16px; display:flex; justify-content:space-between; align-items:center; }
   .data-row:first-child { border-radius:10px 10px 0 0; }
@@ -384,9 +397,9 @@
 <div id="auth-screen">
   <div class="auth-card">
     <div class="auth-logo">
-      <div class="logo-mark">MX</div>
-      <div class="brand">Meta.X</div>
-      <div class="sub">Advisor Digital de Liderança</div>
+      <div class="logo-img-wrap">
+        <img src="logo-mtx-advisor.png" alt="MTX Advisor — Gestão de Líderes">
+      </div>
     </div>
     <div class="form-group">
       <label>E-mail</label>
@@ -406,8 +419,10 @@
 <div id="force-pw-screen" style="display:none">
   <div class="auth-card">
     <div class="auth-logo">
-      <div class="logo-mark">MX</div>
-      <div class="brand">Primeiro Acesso</div>
+      <div class="logo-img-wrap">
+        <img src="logo-mtx-advisor.png" alt="MTX Advisor">
+      </div>
+      <div class="brand" style="margin-top:8px">Primeiro Acesso</div>
       <div class="sub">Defina sua senha pessoal para continuar</div>
     </div>
     <div class="alert-card alert-info" style="margin-bottom:20px">
@@ -431,10 +446,9 @@
   <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-brand-wrap">
-        <div class="sidebar-logo-mark">MX</div>
-        <div>
-          <div class="sidebar-brand">Meta.X</div>
-          <div class="sidebar-sub">1:1 Advisor</div>
+        <div class="sidebar-logo-mark">
+          <span class="sidebar-logo-mtx">mt<span style="color:#2a9d8f">x</span></span>
+          <span class="sidebar-logo-advisor">ADVISOR</span>
         </div>
       </div>
     </div>
@@ -514,7 +528,7 @@
       </div>
       <div style="display:flex;gap:12px;align-items:center">
         <span class="text-sm text-muted" id="topbar-date" style="display:none" class="hide-mobile"></span>
-        <span class="metax-badge">Meta.X</span>
+        <span class="metax-badge"><span class="b-mtx">mt</span><span class="b-x">x</span><span class="b-advisor">ADVISOR</span></span>
       </div>
     </div>
     <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
