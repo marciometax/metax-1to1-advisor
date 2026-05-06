@@ -701,48 +701,56 @@
       </div>
     </div>
     <nav>
-      <!-- PRINCIPAL -->
+      <!-- ===================== PRINCIPAL ===================== -->
       <div class="nav-section">Principal</div>
-      <!-- LÍDER: Meus 1:1 (1º) -->
-      <div class="nav-item" onclick="showPage('my1on1')" id="nav-my1on1" style="display:none">
-        <span class="icon">◈</span> Meus 1:1
+
+      <!-- ADMIN 1º: Gerar nova 1:1 -->
+      <div class="nav-item" onclick="showPage('new1on1')" id="nav-new1on1" style="display:none">
+        <span class="icon">✦</span> Gerar nova 1:1
       </div>
-      <!-- LÍDER: Alertas (2º) -->
+      <!-- ADMIN/LÍDER: Alertas -->
       <div class="nav-item" onclick="showPage('alerts')" id="nav-alerts" style="display:none">
         <span class="icon">⚑</span> Alertas
         <span id="alerts-badge" style="margin-left:auto;background:#ef4444;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700;display:none">0</span>
       </div>
-      <!-- LÍDER: Histórico (3º) -->
-      <div class="nav-item" onclick="showPage('history')" id="nav-history" style="display:none">
+      <!-- ADMIN 3º: Histórico (alias admin) -->
+      <div class="nav-item" onclick="showPage('history')" id="nav-history-admin" style="display:none">
         <span class="icon">◷</span> Histórico
       </div>
-      <!-- LÍDER: Dashboard (4º) / ADMIN: Dashboard (1º) -->
+      <!-- ADMIN 4º / LÍDER 4º: Dashboard -->
       <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
         <span class="icon">◉</span> Dashboard
       </div>
-      <!-- LÍDER: Meu Perfil (5º) -->
+      <!-- ADMIN 5º: Líderes -->
+      <div class="nav-item" onclick="showPage('leaders')" id="nav-leaders" style="display:none">
+        <span class="icon">◈</span> Líderes
+      </div>
+      <!-- ADMIN 6º: Chat com Líderes -->
+      <div class="nav-item" onclick="showPage('chat')" id="nav-chat-admin" style="display:none">
+        <span class="icon">💬</span> Chat com Líderes
+        <span id="chat-admin-badge" style="margin-left:auto;background:#0076BD;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700;display:none">0</span>
+      </div>
+
+      <!-- LÍDER 1º: Meus 1:1 -->
+      <div class="nav-item" onclick="showPage('my1on1')" id="nav-my1on1" style="display:none">
+        <span class="icon">◈</span> Meus 1:1
+      </div>
+      <!-- LÍDER 3º: Histórico -->
+      <div class="nav-item" onclick="showPage('history')" id="nav-history" style="display:none">
+        <span class="icon">◷</span> Histórico
+      </div>
+      <!-- LÍDER 5º: Meu Perfil -->
       <div class="nav-section" id="nav-sec-profile" style="display:none">Perfil</div>
       <div class="nav-item" onclick="showPage('profile')" id="nav-profile" style="display:none">
         <span class="icon">👤</span> Meu Perfil
       </div>
-      <!-- LÍDER: Chat (6º) -->
+      <!-- LÍDER 6º: Chat direto com Márcio -->
       <div class="nav-item" onclick="showPage('chat')" id="nav-chat" style="display:none">
         <span class="icon">💬</span> Chat
         <span id="chat-badge" style="margin-left:auto;background:#0076BD;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700;display:none">0</span>
       </div>
-      <!-- ADMIN: Líderes -->
-      <div class="nav-item" onclick="showPage('leaders')" id="nav-leaders" style="display:none">
-        <span class="icon">◈</span> Líderes
-      </div>
-      <!-- ADMIN: Gerar 1:1 -->
-      <div class="nav-item" onclick="showPage('new1on1')" id="nav-new1on1" style="display:none">
-        <span class="icon">✦</span> Gerar 1:1
-      </div>
-      <!-- ADMIN: Histórico global (sempre visível para admin) -->
-      <div class="nav-item" onclick="showPage('history')" id="nav-history-admin" style="display:none">
-        <span class="icon">◷</span> Histórico
-      </div>
-      <!-- CEO DIGITAL -->
+
+      <!-- ===================== CEO DIGITAL ===================== -->
       <div class="nav-section" id="nav-sec-ceo" style="display:none">CEO Digital</div>
       <div class="nav-item" onclick="showPage('ceo')" id="nav-ceo" style="display:none">
         <span class="icon">◆</span> <span style="background:var(--grad1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700">CEO Digital</span>
@@ -754,7 +762,8 @@
       <div class="nav-item" onclick="showPage('timeline')" id="nav-timeline" style="display:none">
         <span class="icon">◷</span> Timelines
       </div>
-      <!-- ADMIN -->
+
+      <!-- ===================== ADMIN ===================== -->
       <div class="nav-section" id="nav-sec-admin" style="display:none">Admin</div>
       <div class="nav-item" onclick="showPage('reports')" id="nav-reports" style="display:none">
         <span class="icon">▦</span> Relatórios
@@ -1671,9 +1680,10 @@ function startApp() {
   document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
 
   if (currentUser.isAdmin) {
-    // Admin: leaders, new1on1, history-admin, alerts, reports, admin, ceo, notifications
-    ['nav-leaders','nav-alerts','nav-reports','nav-admin','nav-sec-admin',
-     'nav-ceo','nav-sec-ceo','nav-new1on1','nav-crisis','nav-timeline','nav-notifications','nav-history-admin'].forEach(id => {
+    // Admin: Gerar 1:1 → Alertas → Histórico → Dashboard → Líderes → Chat com Líderes | CEO Digital | Admin
+    ['nav-new1on1','nav-alerts','nav-history-admin','nav-leaders','nav-chat-admin',
+     'nav-reports','nav-admin','nav-sec-admin',
+     'nav-ceo','nav-sec-ceo','nav-crisis','nav-timeline','nav-notifications'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = '';
     });
     ['nav-my1on1','nav-profile','nav-sec-profile','nav-history','nav-chat'].forEach(id => {
@@ -1681,7 +1691,7 @@ function startApp() {
     });
     renderAdminDashboard();
     updateAlertsBadge();
-    setTimeout(() => { checkAndGenerateNotifications(); updateNotifBadge(); }, 800);
+    setTimeout(() => { checkAndGenerateNotifications(); updateNotifBadge(); updateChatAdminBadge(); }, 800);
   } else {
     // Leader: Meus 1:1 → Alertas → Histórico → Dashboard → Meu Perfil → Chat
     ['nav-my1on1','nav-alerts','nav-history','nav-profile','nav-sec-profile','nav-chat'].forEach(id => {
@@ -1689,7 +1699,7 @@ function startApp() {
     });
     ['nav-leaders','nav-reports','nav-admin','nav-sec-admin',
      'nav-ceo','nav-sec-ceo','nav-crisis','nav-timeline','nav-notifications',
-     'nav-new1on1','nav-history-admin'].forEach(id => {
+     'nav-new1on1','nav-history-admin','nav-chat-admin'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
     const leaderData = store.leaders.find(l => l.id === currentUser.id);
@@ -2199,20 +2209,26 @@ function showPage(page) {
   pageEl.classList.add('active');
   const navEl = document.getElementById('nav-' + page);
   if (navEl) navEl.classList.add('active');
-  // history nav alias for admin
+
+  const titles = {
+    dashboard: 'Dashboard', leaders: 'Líderes', my1on1: 'Meus 1:1',
+    new1on1: 'Gerar nova 1:1', history: 'Histórico', alerts: 'Alertas',
+    reports: 'Relatórios', admin: 'Administração', ceo: 'CEO Digital',
+    profile: 'Meu Perfil', crisis: '🔴 Crisis Board', timeline: 'Timelines de Líderes',
+    notifications: '🔔 Notificações',
+    chat: currentUser?.isAdmin ? '💬 Chat com Líderes' : '💬 Chat'
+  };
+  document.getElementById('topbar-title').textContent = titles[page] || page;
+
+  // Marcar nav-item correto para admin/chat e admin/history
   if (page === 'history' && currentUser?.isAdmin) {
     const adminHistEl = document.getElementById('nav-history-admin');
     if (adminHistEl) adminHistEl.classList.add('active');
   }
-
-  const titles = {
-    dashboard: 'Dashboard', leaders: 'Líderes', my1on1: 'Meus 1:1',
-    new1on1: 'Gerar 1:1', history: 'Histórico', alerts: 'Alertas',
-    reports: 'Relatórios', admin: 'Administração', ceo: 'CEO Digital',
-    profile: 'Meu Perfil', crisis: '🔴 Crisis Board', timeline: 'Timelines de Líderes',
-    notifications: '🔔 Notificações', chat: '💬 Chat'
-  };
-  document.getElementById('topbar-title').textContent = titles[page] || page;
+  if (page === 'chat' && currentUser?.isAdmin) {
+    const adminChatEl = document.getElementById('nav-chat-admin');
+    if (adminChatEl) adminChatEl.classList.add('active');
+  }
 
   if (page === 'dashboard') { if (currentUser.isAdmin) renderAdminDashboard(); else renderLeaderDashboard(); }
   if (page === 'crisis') renderCrisisBoard();
@@ -2230,7 +2246,7 @@ function showPage(page) {
   if (page === 'ceo') renderCeoPage();
   if (page === 'profile') renderProfilePage();
   if (page === 'notifications') renderNotificationsPage();
-  if (page === 'chat') renderChatPage();
+  if (page === 'chat') { renderChatPage(); markChatRead(); if (currentUser.isAdmin) updateChatAdminBadge(); else updateChatBadge(); }
 }
 
 function markAlertsRead() {
@@ -6660,6 +6676,7 @@ function renderNotificationsPage() {
   el.innerHTML = `
     <div class="tabs mb-0" id="notif-tabs" style="margin-bottom:0;overflow-x:auto;flex-wrap:nowrap">
       <div class="tab active" onclick="switchNotifTab('feed')" style="white-space:nowrap">Central de Notificações</div>
+      <div class="tab" onclick="switchNotifTab('enviar')" style="white-space:nowrap">✉ Enviar Notificação</div>
       <div class="tab" onclick="switchNotifTab('config')" style="white-space:nowrap">Configurações</div>
       <div class="tab" onclick="switchNotifTab('email')" style="white-space:nowrap">📧 E-mail Workflow</div>
     </div>
@@ -6683,6 +6700,45 @@ function renderNotificationsPage() {
       <!-- Feed -->
       <div class="card" style="padding:0 24px">
         ${notifItems}
+      </div>
+    </div>
+
+    <div id="notif-tab-enviar" style="display:none;margin-top:20px">
+      <div class="card" style="max-width:600px">
+        <div class="card-title">✉ Enviar Notificação para Líderes</div>
+        <div class="form-group">
+          <label class="form-label">Destinatário</label>
+          <select id="notif-send-target" class="form-input">
+            <option value="all">Todos os líderes</option>
+            ${store.leaders.map(l => `<option value="${l.id}">${l.name} — ${l.area||''}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tipo</label>
+          <select id="notif-send-type" class="form-input">
+            <option value="info">💬 Informativo</option>
+            <option value="warning">⚠ Atenção</option>
+            <option value="risk_red">🔴 Crítico</option>
+            <option value="action_overdue">🚨 Ação obrigatória</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Título</label>
+          <input type="text" id="notif-send-title" class="form-input" placeholder="Ex: Seu 1:1 está pendente">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mensagem</label>
+          <textarea id="notif-send-body" class="form-input" rows="3" placeholder="Escreva a mensagem para o(s) líder(es)..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Canal</label>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="notif-ch-system" checked> Sistema</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--text3)"><input type="checkbox" id="notif-ch-email" disabled> E-mail (em breve)</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--text3)"><input type="checkbox" id="notif-ch-teams" disabled> Teams (em breve)</label>
+          </div>
+        </div>
+        <button class="btn-compact" onclick="sendAdminNotification()">✉ Enviar Agora</button>
       </div>
     </div>
 
@@ -6740,16 +6796,33 @@ function renderNotificationsPage() {
 }
 
 function switchNotifTab(tab) {
+  // tabs order: feed(0), enviar(1), config(2), email(3)
   document.querySelectorAll('#notif-tabs .tab').forEach((t, i) => {
-    const isActive = (i === 0 && tab === 'feed') || (i === 1 && tab === 'config') || (i === 2 && tab === 'email');
-    t.classList.toggle('active', isActive);
+    const labels = ['feed','enviar','config','email'];
+    t.classList.toggle('active', labels[i] === tab);
   });
-  const feed = document.getElementById('notif-tab-feed');
-  const cfg = document.getElementById('notif-tab-config');
-  const email = document.getElementById('notif-tab-email');
-  if (feed) feed.style.display = tab === 'feed' ? '' : 'none';
-  if (cfg) cfg.style.display = tab === 'config' ? '' : 'none';
-  if (email) email.style.display = tab === 'email' ? '' : 'none';
+  ['feed','enviar','config','email'].forEach(id => {
+    const el = document.getElementById('notif-tab-' + id);
+    if (el) el.style.display = id === tab ? '' : 'none';
+  });
+}
+
+function sendAdminNotification() {
+  const target = document.getElementById('notif-send-target')?.value;
+  const type = document.getElementById('notif-send-type')?.value || 'info';
+  const title = document.getElementById('notif-send-title')?.value.trim();
+  const body = document.getElementById('notif-send-body')?.value.trim();
+  if (!title || !body) { showToast('Preencha título e mensagem.', 'warning'); return; }
+
+  const targets = target === 'all' ? store.leaders.map(l => l.id) : [target];
+  targets.forEach(leaderId => {
+    addNotification(type, title, body, { leaderId, channel: 'admin_manual', sentBy: currentUser.id });
+  });
+
+  showToast(`Notificação enviada para ${targets.length === 1 ? store.leaders.find(l=>l.id===targets[0])?.name || 'líder' : targets.length + ' líderes'}.`, 'success');
+  document.getElementById('notif-send-title').value = '';
+  document.getElementById('notif-send-body').value = '';
+  auditLog('admin_notification_sent', { targets, type, title });
 }
 
 function toggleNotifCfg(key, value) {
@@ -6816,9 +6889,18 @@ function updateChatBadge() {
   const badge = document.getElementById('chat-badge');
   if (!badge) return;
   const msgs = getChatMessages();
-  const isAdmin = currentUser.isAdmin;
-  // Conta não lidas para o usuário atual
-  const unread = msgs.filter(m => isAdmin ? (!m.isAdmin && !m.read) : (m.isAdmin && !m.read)).length;
+  // Líder: conta mensagens do admin não lidas
+  const unread = msgs.filter(m => m.isAdmin && m.toLeaderId === currentUser.id && !m.read).length;
+  badge.textContent = unread;
+  badge.style.display = unread > 0 ? '' : 'none';
+}
+
+function updateChatAdminBadge() {
+  const badge = document.getElementById('chat-admin-badge');
+  if (!badge) return;
+  const msgs = getChatMessages();
+  // Admin: conta mensagens de líderes não lidas
+  const unread = msgs.filter(m => !m.isAdmin && !m.read).length;
   badge.textContent = unread;
   badge.style.display = unread > 0 ? '' : 'none';
 }
