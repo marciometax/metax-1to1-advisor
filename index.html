@@ -356,32 +356,112 @@
   .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
   .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
 
+  /* =============================================
+     MOBILE-FIRST — Doc 25
+     Breakpoints: 900px tablet, 600px, 480px, 375px
+  ============================================= */
+
+  /* Safe area padding for iOS notch/home bar */
+  body { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .sidebar { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .topbar { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+  /* Touch target minimum 44px */
+  .btn { min-height: 44px; }
+  .btn-sm { min-height: 36px; }
+  .btn-xs { min-height: 32px; }
+  .nav-item { min-height: 40px; }
+
+  /* Global: no horizontal overflow */
+  * { max-width: 100%; }
+  img, video, iframe, table { max-width: 100%; }
+
+  /* History: mobile card mode hidden desktop-only elements */
+  .history-mobile-card { display: none; }
+  .history-desktop-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
   @media (max-width: 900px) {
-    .sidebar { transform: translateX(-100%); }
-    .sidebar.open { transform: translateX(0); }
+    .sidebar { transform: translateX(-100%); width: 280px; }
+    .sidebar.open { transform: translateX(0); box-shadow: var(--shadow-lg); }
     .main { margin-left: 0; }
     .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
-    .page { padding: 16px; }
+    .page { padding: 14px 14px calc(14px + env(safe-area-inset-bottom, 0px)); }
     .mobile-menu-btn { display:block; }
-    .topbar { padding: 0 16px; }
+    .topbar { padding: 0 16px; height: 56px; }
     /* Dashboard mobile */
     .metric-card { min-width: 0; width: 100%; }
     #dash-leader-map { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    #dash-leader-map table { min-width: 600px; }
+    #dash-leader-map table { min-width: 540px; }
     .card { overflow: visible; }
     #page-dashboard { overflow-y: auto; }
     #dash-marcio, #dash-leader { display: block !important; }
-    #dash-marcio > .grid-2 { gap: 14px; }
+    #dash-marcio > .grid-2 { gap: 12px; }
+    /* Reports: single column */
+    .grid-2.reports-grid { grid-template-columns: 1fr; }
+    /* Admin: action col stack */
+    .admin-action-col { flex-direction: row !important; flex-wrap: wrap !important; min-width: 0 !important; }
+    /* Modals: full screen on mobile */
+    .modal { border-radius: 16px 16px 0 0; position: fixed; bottom: 0; left: 0; right: 0; max-width: 100% !important; max-height: 92vh; margin: 0; }
+    .modal-overlay { align-items: flex-end; padding: 0; }
+    /* History table → cards */
+    .history-desktop-table { display: none; }
+    .history-mobile-card { display: block; }
+    /* Topbar date: hide on mobile */
+    #topbar-date { display: none !important; }
+    /* Teams banner: stack */
+    .teams-connect-banner { flex-direction: column; gap: 10px; text-align: center; }
+    /* Admin card: reduce gap */
+    #admin-leaders-grid .card > div:first-child { flex-wrap: wrap; gap: 12px; }
   }
+
+  @media (max-width: 600px) {
+    .grid-4 { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .my1on1-kpi-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .cal-cell { min-height: 48px; padding: 3px; }
+    .cal-event { display: none; }
+    .cal-nav { flex-direction: column; gap: 10px; align-items: flex-start; }
+    .modal-body { padding: 16px; }
+    .modal-header { padding: 16px 16px 0; padding-bottom: 12px; }
+    .modal-footer { padding: 0 16px 16px; padding-top: 12px; }
+    .anamnese-question { font-size: 18px; }
+    .step-title { font-size: 16px; }
+    /* Admin leader card: columns → stack */
+    #admin-leaders-grid .card > div:first-child { flex-direction: column; }
+    .admin-action-col { flex-direction: row !important; flex-wrap: wrap !important; width: 100% !important; }
+    /* Notif kpi */
+    .notif-kpi-value { font-size: 22px; }
+  }
+
   @media (max-width: 480px) {
-    .auth-card { padding: 28px 20px; }
+    .auth-card { padding: 28px 20px; border-radius: 16px; }
     .anamnese-question { font-size: 17px; }
-    .btn { font-size: 14px; }
-    .metric-value { font-size: 26px; }
-    /* Dashboard mobile pequeno */
-    .metric-card { padding: 16px; }
-    .metric-label { font-size: 11px; }
+    .btn { font-size: 13px; padding: 10px 16px; }
+    .btn-sm { font-size: 12px; padding: 8px 12px; }
     .metric-value { font-size: 22px; }
+    .metric-card { padding: 14px; }
+    .metric-label { font-size: 10px; }
+    .card { padding: 16px; }
+    .card-title { font-size: 13px; }
+    .topbar-title { font-size: 14px; }
+    /* Calendar: minimal */
+    .cal-day-num { font-size: 11px; }
+    /* Upcoming: tighter */
+    .upcoming-date-block { padding: 4px 8px; min-width: 44px; }
+    .upcoming-day-num { font-size: 17px; }
+    /* Grid KPIs: 2 col */
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+    /* Admin action row: wrap */
+    .admin-action-row { gap: 6px; }
+    .admin-action-row .btn { flex: 1 1 calc(50% - 3px); justify-content: center; }
+  }
+
+  @media (max-width: 375px) {
+    .page { padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px)); }
+    .sidebar { width: 260px; }
+    .btn { padding: 10px 12px; }
+    .topbar { height: 52px; }
+    .metric-value { font-size: 20px; }
+    .auth-card { padding: 24px 16px; }
   }
 
   /* Skeleton loader */
@@ -717,21 +797,26 @@
     <div class="page" id="page-history">
       <div class="card">
         <div class="card-title">◷ Histórico de Reuniões</div>
-        <div id="history-filters" class="mb-16" style="display:flex;gap:12px;flex-wrap:wrap"></div>
-        <table>
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Líder</th>
-              <th>Área</th>
-              <th>Temas</th>
-              <th>Planos</th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="history-tbody"></tbody>
-        </table>
+        <div id="history-filters" class="mb-16" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+        <!-- Desktop table -->
+        <div class="history-desktop-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Líder</th>
+                <th>Área</th>
+                <th>Temas</th>
+                <th>Planos</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody"></tbody>
+          </table>
+        </div>
+        <!-- Mobile cards -->
+        <div class="history-mobile-card" id="history-cards"></div>
       </div>
     </div>
 
@@ -2955,33 +3040,65 @@ function showSessionSummary(session, leader) {
 // ============================================================
 function renderHistory(filterLeaderId = null) {
   const tbody = document.getElementById('history-tbody');
-  if (!tbody) return;
+  const cardsEl = document.getElementById('history-cards');
 
   let sessions = store.sessions;
   if (!currentUser.isAdmin) sessions = sessions.filter(s => s.leaderId === currentUser.id);
   if (filterLeaderId) sessions = sessions.filter(s => s.leaderId === filterLeaderId);
-
   sessions = [...sessions].sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO));
 
   if (!sessions.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="text-muted text-sm" style="text-align:center;padding:32px">Nenhuma reunião encontrada.</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-muted text-sm" style="text-align:center;padding:32px">Nenhuma reunião encontrada.</td></tr>';
+    if (cardsEl) cardsEl.innerHTML = '<div class="dash-empty-state"><div class="empty-icon">◷</div><div class="empty-title">Nenhuma reunião ainda</div><div class="empty-sub">Suas reuniões 1:1 aparecerão aqui.</div></div>';
     return;
   }
 
-  tbody.innerHTML = sessions.map(s => {
-    const leader = store.leaders.find(l => l.id === s.leaderId);
-    const actions = store.actionItems.filter(a => a.sessionId === s.id);
-    const topics = [s.data?.mainTopic, s.data?.risks, s.data?.kpis].filter(Boolean).map(t => t.substring(0,30)).join(', ');
-    return `<tr>
-      <td>${s.date}</td>
-      <td><div class="flex items-center gap-8"><div class="user-avatar" style="background:${leader?.color||'#6366f1'};width:28px;height:28px;font-size:12px">${leader?.name[0]||'?'}</div>${leader?.name||'?'}</div></td>
-      <td class="text-muted">${leader?.area||'—'}</td>
-      <td class="text-muted text-sm">${topics.substring(0,60) || '—'}</td>
-      <td>${actions.length} ${actions.length === 1 ? 'ação' : 'ações'}</td>
-      <td><span class="badge badge-green">Concluída</span></td>
-      <td><button class="btn btn-secondary btn-sm" onclick="viewSession('${s.id}')">Ver</button></td>
-    </tr>`;
-  }).join('');
+  // Desktop table rows
+  if (tbody) {
+    tbody.innerHTML = sessions.map(s => {
+      const leader = store.leaders.find(l => l.id === s.leaderId);
+      const actions = store.actionItems.filter(a => a.sessionId === s.id);
+      const topics = [s.data?.mainTopic, s.data?.risks, s.data?.kpis].filter(Boolean).map(t => t.substring(0,30)).join(', ');
+      return `<tr>
+        <td style="white-space:nowrap">${s.date}</td>
+        <td><div class="flex items-center gap-8"><div class="user-avatar" style="background:${leader?.color||'#6366f1'};width:28px;height:28px;font-size:12px;flex-shrink:0">${leader?.name[0]||'?'}</div>${leader?.name||'?'}</div></td>
+        <td class="text-muted">${leader?.area||'—'}</td>
+        <td class="text-muted text-sm">${(topics.substring(0,60)) || '—'}</td>
+        <td>${actions.length} ${actions.length === 1 ? 'ação' : 'ações'}</td>
+        <td><span class="badge badge-green">Concluída</span></td>
+        <td><button class="btn btn-secondary btn-sm" onclick="viewSession('${s.id}')">Ver</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Mobile cards — Doc 25 §E: cada reunião vira card vertical
+  if (cardsEl) {
+    cardsEl.innerHTML = sessions.map(s => {
+      const leader = store.leaders.find(l => l.id === s.leaderId);
+      const actions = store.actionItems.filter(a => a.sessionId === s.id);
+      const topic = s.data?.mainTopic || s.data?.checkin || '—';
+      const avatarHtml = leader?.photo
+        ? `<img src="${leader.photo}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+        : `<div style="width:36px;height:36px;border-radius:50%;background:${leader?.color||'#6366f1'};display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:14px;flex-shrink:0">${(leader?.name||'?')[0]}</div>`;
+      return `<div style="display:flex;align-items:flex-start;gap:12px;padding:13px 0;border-bottom:1px solid var(--border)">
+        ${avatarHtml}
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:3px">
+            <div>
+              <div class="fw-700" style="font-size:14px">${leader?.name||'—'}</div>
+              <div class="text-xs text-muted">${leader?.area||'—'} · ${s.date}</div>
+            </div>
+            <span class="badge badge-green" style="flex-shrink:0">✓</span>
+          </div>
+          <div class="text-sm text-muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px">${topic.substring(0,60)}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span class="text-xs text-muted">${actions.length} plano${actions.length!==1?'s':''}</span>
+            <button class="btn btn-secondary btn-sm" onclick="viewSession('${s.id}')" style="padding:6px 14px">Ver</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
 }
 
 function viewSession(sessionId) {
@@ -3627,7 +3744,7 @@ function renderAdminLeadersGrid() {
         </div>
 
         <!-- Actions col -->
-        <div style="flex-shrink:0;display:flex;flex-direction:column;gap:8px;min-width:140px">
+        <div class="admin-action-col" style="flex-shrink:0;display:flex;flex-direction:column;gap:8px;min-width:140px">
           <button class="btn btn-secondary btn-sm" onclick="openEditLeader('${l.id}')">✏ Editar Perfil</button>
           <button class="btn btn-secondary btn-sm" onclick="quickEditPhoto('${l.id}')" style="border-color:var(--teal);color:var(--teal)">📷 Alterar Foto</button>
           <button class="btn btn-secondary btn-sm" onclick="startNew1on1FromAdmin('${l.id}');showPage('new1on1')">▶ Novo 1:1</button>
@@ -5621,9 +5738,10 @@ function renderNotificationsPage() {
   const today = list.filter(n => new Date(n.ts).toDateString() === new Date().toDateString()).length;
 
   el.innerHTML = `
-    <div class="tabs mb-0" id="notif-tabs" style="margin-bottom:0">
-      <div class="tab active" onclick="switchNotifTab('feed')">Central de Notificações</div>
-      <div class="tab" onclick="switchNotifTab('config')">Configurações</div>
+    <div class="tabs mb-0" id="notif-tabs" style="margin-bottom:0;overflow-x:auto;flex-wrap:nowrap">
+      <div class="tab active" onclick="switchNotifTab('feed')" style="white-space:nowrap">Central de Notificações</div>
+      <div class="tab" onclick="switchNotifTab('config')" style="white-space:nowrap">Configurações</div>
+      <div class="tab" onclick="switchNotifTab('email')" style="white-space:nowrap">📧 E-mail Workflow</div>
     </div>
 
     <div id="notif-tab-feed" style="margin-top:20px">
@@ -5694,18 +5812,24 @@ function renderNotificationsPage() {
         </div>`).join('')}
       </div>
     </div>
+
+    <div id="notif-tab-email" style="display:none;margin-top:20px">
+      ${renderEmailWorkflowTab()}
+    </div>
   `;
 }
 
 function switchNotifTab(tab) {
   document.querySelectorAll('#notif-tabs .tab').forEach((t, i) => {
-    const isActive = (i === 0 && tab === 'feed') || (i === 1 && tab === 'config');
+    const isActive = (i === 0 && tab === 'feed') || (i === 1 && tab === 'config') || (i === 2 && tab === 'email');
     t.classList.toggle('active', isActive);
   });
   const feed = document.getElementById('notif-tab-feed');
   const cfg = document.getElementById('notif-tab-config');
+  const email = document.getElementById('notif-tab-email');
   if (feed) feed.style.display = tab === 'feed' ? '' : 'none';
   if (cfg) cfg.style.display = tab === 'config' ? '' : 'none';
+  if (email) email.style.display = tab === 'email' ? '' : 'none';
 }
 
 function toggleNotifCfg(key, value) {
@@ -5713,6 +5837,374 @@ function toggleNotifCfg(key, value) {
   cfg[key] = value;
   saveNotifCfg(cfg);
   showToast(value ? `Alertas "${key}" ativados.` : `Alertas "${key}" desativados.`);
+}
+
+// ============================================================
+// EMAIL WORKFLOW ENGINE (Doc 26)
+// ============================================================
+const EMAIL_FROM_NAME = 'Márcio Goicocheia | MTX Advisor';
+const EMAIL_FROM = 'marcio.goicocheia@metax.ind.br';
+const EMAIL_SYSTEM_URL = 'https://mtxadvisor.netlify.app/';
+const EMAIL_LOG_KEY = 'metax_email_log';
+
+const EMAIL_FRASES = {
+  onboarding: 'Antes de evoluir a liderança, precisamos enxergar com clareza onde ela está hoje.',
+  anamnese_incomplete: 'O que fica incompleto não gera clareza. E sem clareza, a liderança perde força.',
+  anamnese_done: 'Autoconhecimento só tem valor quando vira comportamento melhor.',
+  session_reminder: 'Reunião boa não começa na hora marcada. Começa na preparação.',
+  session_reminder_24h: 'Quem chega sem dados, chega apenas com opinião.',
+  session_done: 'A melhor reunião é aquela que gera compromisso, não só conversa.',
+  action_created: 'Compromisso sem execução vira intenção. E intenção não muda resultado.',
+  action_due: 'O prazo revela a força do compromisso.',
+  action_overdue: 'O problema não é errar o prazo. O problema é deixar o atraso sem dono.',
+  risk_red: 'O risco não aparece de uma vez. Ele dá sinais. Agora é hora de agir.',
+  weekly_leader: 'Liderança consistente é construída em ciclos curtos de execução e aprendizado.',
+  weekly_ceo: 'O CEO não precisa saber de tudo. Precisa enxergar cedo o que pode virar problema.',
+};
+
+// Email templates per event
+const EMAIL_TEMPLATES = {
+  'user.created': {
+    subject: 'Seu acesso ao MTX Advisor foi criado',
+    title: 'Bem-vindo ao MTX Advisor',
+    getMessage: (l) => `Você foi cadastrado no MTX Advisor, a plataforma de gestão de líderes da Meta.X. Seu primeiro passo é acessar o sistema, trocar sua senha e iniciar sua anamnese de desenvolvimento.`,
+    action: 'Acessar o sistema e iniciar sua anamnese.',
+    frase: EMAIL_FRASES.onboarding,
+  },
+  'anamnesis.incomplete_24h': {
+    subject: 'Sua anamnese no MTX Advisor ainda está pendente',
+    title: 'Anamnese pendente — complete agora',
+    getMessage: (l) => `Você iniciou sua anamnese, mas ainda não concluiu. Esse processo é essencial para que o Advisor compreenda seu perfil, seus desafios e sua forma de liderar.`,
+    action: 'Retomar e concluir a anamnese.',
+    frase: EMAIL_FRASES.anamnese_incomplete,
+  },
+  'anamnesis.incomplete_72h': {
+    subject: 'Anamnese incompleta — precisamos da sua resposta',
+    title: 'Sua anamnese está parada há 3 dias',
+    getMessage: (l) => `Sua anamnese está incompleta há mais de 72h. Sem ela, o MTX Advisor não consegue personalizar as provocações e planos do seu 1:1. Complete agora — leva menos de 15 minutos.`,
+    action: 'Concluir anamnese imediatamente.',
+    frase: EMAIL_FRASES.anamnese_incomplete,
+  },
+  'anamnesis.completed': {
+    subject: 'Anamnese concluída com sucesso — MTX Advisor',
+    title: 'Anamnese concluída',
+    getMessage: (l) => `Sua anamnese foi concluída. O MTX Advisor já possui uma base inicial para personalizar suas provocações, planos e conversas 1:1. Acompanhe seu painel.`,
+    action: 'Acompanhar painel e preparar-se para o próximo 1:1.',
+    frase: EMAIL_FRASES.anamnese_done,
+  },
+  'meeting.reminder_24h': {
+    subject: 'Seu 1:1 acontece amanhã — MTX Advisor',
+    title: 'Lembrete: 1:1 amanhã',
+    getMessage: (l) => `Este é um lembrete para sua reunião 1:1. Chegue com clareza sobre entregas, pendências, riscos e decisões necessárias.`,
+    action: 'Revisar planos e atualizar informações antes da reunião.',
+    frase: EMAIL_FRASES.session_reminder_24h,
+  },
+  'meeting.completed': {
+    subject: 'Resumo do seu 1:1 disponível — MTX Advisor',
+    title: '1:1 concluído — resumo e próximos passos',
+    getMessage: (l) => `Sua reunião 1:1 foi registrada. Os planos de ação foram salvos e estão disponíveis no seu painel para acompanhamento.`,
+    action: 'Revisar planos de ação e iniciar execução.',
+    frase: EMAIL_FRASES.session_done,
+  },
+  'action_plan.created': {
+    subject: 'Novo plano de ação registrado — MTX Advisor',
+    title: 'Plano de ação criado',
+    getMessage: (l) => `Um novo plano de ação foi registrado no MTX Advisor com prazo e responsável definidos.`,
+    action: 'Executar e atualizar o progresso no sistema.',
+    frase: EMAIL_FRASES.action_created,
+  },
+  'action_plan.due_24h': {
+    subject: 'Plano de ação vence amanhã — MTX Advisor',
+    title: 'Atenção: prazo amanhã',
+    getMessage: (l) => `Você possui um plano de ação com vencimento em 24 horas. Atualize o status ou conclua a entrega antes do prazo.`,
+    action: 'Atualizar ou concluir o plano.',
+    frase: EMAIL_FRASES.action_due,
+  },
+  'action_plan.overdue': {
+    subject: 'Plano de ação vencido — MTX Advisor',
+    title: 'Plano vencido — regularize agora',
+    getMessage: (l) => `Um plano de ação sob sua responsabilidade venceu e ainda não foi concluído. É necessário atualizar o status, justificar ou concluir imediatamente.`,
+    action: 'Regularizar o plano no sistema.',
+    frase: EMAIL_FRASES.action_overdue,
+  },
+  'risk.changed_red': {
+    subject: 'Alerta crítico de liderança — MTX Advisor',
+    title: 'Score de risco crítico',
+    getMessage: (l) => `Seu perfil entrou em nível vermelho de atenção com base em dados de cadência, planos vencidos, maturidade e execução. Este alerta exige ação imediata.`,
+    action: 'Revisar pendências e alinhar prioridades com Márcio.',
+    frase: EMAIL_FRASES.risk_red,
+  },
+  'weekly.leader': {
+    subject: 'Seu resumo semanal — MTX Advisor',
+    title: 'Resumo semanal de liderança',
+    getMessage: (l) => `Segue seu resumo semanal com reuniões, planos, pendências, alertas e evolução de maturidade.`,
+    action: 'Revisar pendências e preparar prioridades da semana.',
+    frase: EMAIL_FRASES.weekly_leader,
+  },
+  'weekly.ceo': {
+    subject: 'Resumo semanal MTX Advisor — Liderança, riscos e execução',
+    title: 'Painel executivo semanal',
+    getMessage: () => `Resumo executivo da semana com líderes em risco, planos vencidos, evolução de maturidade, alertas críticos e sugestões de ação.`,
+    action: 'Revisar painel de crise e priorizar intervenções.',
+    frase: EMAIL_FRASES.weekly_ceo,
+  },
+};
+
+function getEmailLog() {
+  try { return JSON.parse(localStorage.getItem(EMAIL_LOG_KEY) || '[]'); } catch(e) { return []; }
+}
+function saveEmailLog(log) {
+  if (log.length > 300) log.splice(0, log.length - 300);
+  localStorage.setItem(EMAIL_LOG_KEY, JSON.stringify(log));
+}
+
+function composeEmail(event, leaderOrCeo, extraData = {}) {
+  const tmpl = EMAIL_TEMPLATES[event];
+  if (!tmpl) return;
+
+  const isLeader = leaderOrCeo && leaderOrCeo.email;
+  const recipient = isLeader ? leaderOrCeo : { name: 'Márcio Goicocheia', email: EMAIL_FROM };
+  const firstName = recipient.name.split(' ')[0];
+  const msg = tmpl.getMessage ? tmpl.getMessage(recipient) : '';
+
+  const body = `Olá, ${firstName}.\n\n${msg}\n\nAção esperada:\n${tmpl.action}\n\n"${tmpl.frase}"\n\nAcesse o sistema: ${EMAIL_SYSTEM_URL}\n\n---\nMárcio Goicocheia\nMTX Advisor — Meta.X Inovação e Serviços Inteligentes\n\nEste é um e-mail automático do MTX Advisor.`;
+
+  // Log the email
+  const log = getEmailLog();
+  const entry = {
+    id: 'em-' + Date.now(),
+    ts: new Date().toISOString(),
+    event,
+    to: recipient.email,
+    toName: recipient.name,
+    subject: tmpl.subject,
+    template: event,
+    status: 'composed',
+    leaderData: extraData,
+  };
+  log.unshift(entry);
+  saveEmailLog(log);
+  auditLog('email_composed', { event, to: recipient.email, subject: tmpl.subject });
+
+  return { to: recipient.email, subject: tmpl.subject, body, entry };
+}
+
+function sendEmailMailto(event, leader, extraData = {}) {
+  const result = composeEmail(event, leader, extraData);
+  if (!result) return;
+  const { to, subject, body } = result;
+  const mailto = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}&from=${encodeURIComponent(EMAIL_FROM)}`;
+  window.location.href = mailto;
+  showToast(`E-mail composto para ${to}`, 'success');
+  // Mark as sent in log
+  const log = getEmailLog();
+  const entry = log.find(e => e.id === result.entry.id);
+  if (entry) { entry.status = 'sent_via_mailto'; saveEmailLog(log); }
+}
+
+function previewEmailHTML(event, leader) {
+  const tmpl = EMAIL_TEMPLATES[event];
+  if (!tmpl) return '';
+  const recipient = leader || { name: 'Nome do Líder', email: 'lider@metax.ind.br' };
+  const firstName = recipient.name.split(' ')[0];
+  const msg = tmpl.getMessage ? tmpl.getMessage(recipient) : '';
+
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MTX Advisor</title></head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;padding:32px 0"><tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:24px;overflow:hidden;border:1px solid #d9d9d9;max-width:600px;width:100%">
+  <tr><td style="padding:32px 40px 16px 40px">
+    <div style="font-size:36px;font-weight:900;color:#0076BD;letter-spacing:-2px">mt<span style="color:#009CA6">x</span><span style="background:#009CA6;color:#fff;font-size:18px;padding:4px 14px;border-radius:10px;font-style:italic;margin-left:8px">ADVISOR</span></div>
+    <div style="color:#009CA6;font-size:14px;font-weight:bold;font-style:italic;margin-top:4px">Gestão de líderes</div>
+  </td></tr>
+  <tr><td style="padding:24px 40px">
+    <h1 style="margin:0 0 16px;color:#1E1E1E;font-size:22px">${tmpl.title}</h1>
+    <p style="font-size:16px;color:#333;line-height:1.6;margin:0 0 12px">Olá, ${firstName}.</p>
+    <p style="font-size:16px;color:#333;line-height:1.6;margin:0 0 20px">${msg}</p>
+    <div style="background:#f4f6f8;border-left:5px solid #009CA6;padding:16px 20px;margin:0 0 24px;border-radius:12px">
+      <strong style="color:#1E1E1E">Ação esperada:</strong><br><span style="color:#555">${tmpl.action}</span>
+    </div>
+    <div style="text-align:center;margin:0 0 24px">
+      <a href="${EMAIL_SYSTEM_URL}" style="background:#009CA6;color:#fff;text-decoration:none;padding:14px 28px;border-radius:14px;font-weight:bold;display:inline-block">Acessar MTX Advisor</a>
+    </div>
+    <p style="font-size:14px;color:#555;line-height:1.6;font-style:italic;margin:0 0 16px">"${tmpl.frase}"</p>
+    <p style="font-size:16px;color:#333;line-height:1.6;margin:0">Márcio Goicocheia<br>MTX Advisor</p>
+  </td></tr>
+  <tr><td style="background:#f4f6f8;padding:20px 40px;color:#777;font-size:12px;text-align:center">
+    Este é um e-mail automático do MTX Advisor.<br>Meta.X | Gestão de líderes | Inteligência executiva
+  </td></tr>
+</table></td></tr></table></body></html>`;
+}
+
+function renderEmailWorkflowTab() {
+  const log = getEmailLog();
+  const leaders = store.leaders;
+
+  const eventGroups = [
+    { label: 'Cadastro e Acesso', events: [
+      { event: 'user.created', label: 'Novo líder cadastrado' },
+    ]},
+    { label: 'Anamnese', events: [
+      { event: 'anamnesis.incomplete_24h', label: 'Anamnese incompleta 24h' },
+      { event: 'anamnesis.incomplete_72h', label: 'Anamnese incompleta 72h' },
+      { event: 'anamnesis.completed', label: 'Anamnese concluída' },
+    ]},
+    { label: 'Reuniões 1:1', events: [
+      { event: 'meeting.reminder_24h', label: 'Lembrete 24h antes do 1:1' },
+      { event: 'meeting.completed', label: 'Reunião concluída — resumo' },
+    ]},
+    { label: 'Planos de Ação', events: [
+      { event: 'action_plan.created', label: 'Plano criado' },
+      { event: 'action_plan.due_24h', label: 'Plano vence amanhã' },
+      { event: 'action_plan.overdue', label: 'Plano vencido' },
+    ]},
+    { label: 'Risco e Maturidade', events: [
+      { event: 'risk.changed_red', label: 'Score de risco vermelho' },
+    ]},
+    { label: 'Resumos Automáticos', events: [
+      { event: 'weekly.leader', label: 'Resumo semanal do líder' },
+      { event: 'weekly.ceo', label: 'Resumo semanal para Márcio' },
+    ]},
+  ];
+
+  const leaderOptions = leaders.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+
+  const logRows = log.slice(0, 30).map(e => {
+    const statusColor = e.status === 'sent_via_mailto' ? 'var(--success)' : e.status === 'failed' ? 'var(--danger)' : 'var(--text3)';
+    const statusLabel = e.status === 'sent_via_mailto' ? 'Enviado' : e.status === 'composed' ? 'Composto' : e.status;
+    return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1;min-width:0">
+        <div class="fw-600 text-sm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.subject}</div>
+        <div class="text-xs text-muted">${e.toName} · ${e.ts.split('T')[0]}</div>
+      </div>
+      <span class="badge" style="background:transparent;color:${statusColor};border-color:${statusColor};flex-shrink:0">${statusLabel}</span>
+    </div>`;
+  }).join('') || '<div class="text-sm text-muted" style="padding:16px 0">Nenhum e-mail composto ainda.</div>';
+
+  return `
+    <!-- Config header -->
+    <div class="card mb-20">
+      <div class="card-title">📧 E-mail Workflow Engine</div>
+      <div class="data-grid">
+        <div class="data-row"><span class="text-sm">Remetente</span><span class="fw-600 text-sm">${EMAIL_FROM_NAME}</span></div>
+        <div class="data-row"><span class="text-sm">E-mail</span><span class="fw-600 text-sm" style="color:var(--accent)">${EMAIL_FROM}</span></div>
+        <div class="data-row"><span class="text-sm">Canal</span><span class="text-sm">Microsoft 365 / Outlook (mailto via cliente)</span></div>
+        <div class="data-row"><span class="text-sm">Templates ativos</span><span class="fw-700">${Object.keys(EMAIL_TEMPLATES).length}</span></div>
+      </div>
+      <div class="alert-card alert-info" style="margin-top:16px;margin-bottom:0">
+        <div class="alert-body"><strong>Como funciona:</strong> Selecione o evento e o líder. O sistema preenche o template HTML com os dados e abre o Outlook/cliente de e-mail pronto para enviar. Para automação completa, configure o Microsoft Graph API com a conta ${EMAIL_FROM}.</div>
+      </div>
+    </div>
+
+    <!-- Compose -->
+    <div class="card mb-20">
+      <div class="card-title">✉ Compor e Enviar</div>
+      <div class="grid-2" style="gap:16px;margin-bottom:16px">
+        <div class="form-group" style="margin:0">
+          <label>Destinatário</label>
+          <select id="email-leader-select" style="width:100%">
+            <option value="">Selecione o líder...</option>
+            ${leaderOptions}
+            <option value="__ceo__">Márcio Goicocheia (CEO)</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Template / Evento</label>
+          <select id="email-event-select" style="width:100%">
+            <option value="">Selecione o template...</option>
+            ${eventGroups.map(g => `<optgroup label="${g.label}">${g.events.map(e => `<option value="${e.event}">${e.label}</option>`).join('')}</optgroup>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-sm" onclick="previewSelectedEmail()">👁 Pré-visualizar</button>
+        <button class="btn btn-primary btn-sm" onclick="sendSelectedEmail()">📧 Abrir no Outlook</button>
+      </div>
+      <div id="email-preview-area" style="margin-top:16px;display:none">
+        <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;max-height:400px;overflow-y:auto">
+          <iframe id="email-preview-iframe" style="width:100%;border:none;height:400px" title="Preview do e-mail"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <!-- Event catalog -->
+    <div class="card mb-20">
+      <div class="card-title">📋 Catálogo de Eventos (${Object.keys(EMAIL_TEMPLATES).length} templates)</div>
+      ${eventGroups.map(g => `
+        <div class="section-divider"><span>${g.label}</span></div>
+        ${g.events.map(ev => {
+          const tmpl = EMAIL_TEMPLATES[ev.event];
+          return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)">
+            <div>
+              <div class="fw-600 text-sm">${ev.label}</div>
+              <div class="text-xs text-muted">${tmpl?.subject || ''}</div>
+            </div>
+            <span class="badge badge-green">Ativo</span>
+          </div>`;
+        }).join('')}
+      `).join('')}
+    </div>
+
+    <!-- Log -->
+    <div class="card">
+      <div class="card-title">◷ Log de E-mails (${log.length} registros)</div>
+      ${logRows}
+      ${log.length > 30 ? `<div class="text-xs text-muted" style="margin-top:8px">Exibindo os 30 mais recentes de ${log.length}.</div>` : ''}
+    </div>
+
+    <!-- Cadência -->
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">📅 Cadência Automática</div>
+      ${[
+        ['D+0','Cadastro criado → e-mail de boas-vindas'],
+        ['D+1','Primeiro acesso pendente → lembrete'],
+        ['D+3','Anamnese não iniciada → cobrança'],
+        ['24h','Antes do 1:1 → preparação'],
+        ['1h','Antes do 1:1 → lembrete rápido'],
+        ['Pós','Reunião concluída → resumo + planos'],
+        ['72h','Antes do prazo do plano → lembrete'],
+        ['24h','Antes do prazo → alerta'],
+        ['D+0','Plano vencido → cobrança imediata'],
+        ['+3d','Plano vencido → escalonamento'],
+        ['+7d','Plano vencido → alerta crítico'],
+        ['Seg','Resumo semanal para líderes'],
+        ['Seg','Resumo executivo para Márcio'],
+      ].map(([moment, desc]) => `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
+        <span class="badge badge-blue" style="flex-shrink:0;min-width:44px;text-align:center">${moment}</span>
+        <span class="text-sm">${desc}</span>
+      </div>`).join('')}
+    </div>
+  `;
+}
+
+function previewSelectedEmail() {
+  const eventKey = document.getElementById('email-event-select')?.value;
+  const leaderId = document.getElementById('email-leader-select')?.value;
+  if (!eventKey || !leaderId) { showToast('Selecione líder e template.', 'warning'); return; }
+  const leader = leaderId === '__ceo__'
+    ? { name: 'Márcio Goicocheia', email: EMAIL_FROM }
+    : store.leaders.find(l => l.id === leaderId);
+  if (!leader) { showToast('Líder não encontrado.', 'warning'); return; }
+
+  const html = previewEmailHTML(eventKey, leader);
+  const area = document.getElementById('email-preview-area');
+  const iframe = document.getElementById('email-preview-iframe');
+  if (area) area.style.display = '';
+  if (iframe) {
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    doc.open(); doc.write(html); doc.close();
+  }
+}
+
+function sendSelectedEmail() {
+  const eventKey = document.getElementById('email-event-select')?.value;
+  const leaderId = document.getElementById('email-leader-select')?.value;
+  if (!eventKey || !leaderId) { showToast('Selecione líder e template.', 'warning'); return; }
+  const leader = leaderId === '__ceo__'
+    ? { name: 'Márcio Goicocheia', email: EMAIL_FROM }
+    : store.leaders.find(l => l.id === leaderId);
+  if (!leader) return;
+  sendEmailMailto(eventKey, leader);
 }
 
 // Init
