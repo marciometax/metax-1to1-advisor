@@ -721,6 +721,10 @@
         <button class="btn btn-secondary btn-sm" style="flex:1;font-size:11px" onclick="openChangelog()">✦ v<span id="sidebar-version"></span></button>
         <button class="btn btn-secondary btn-sm" style="flex:1;font-size:11px" onclick="exportUserData()" title="Backup dos seus dados">⬇ Backup</button>
       </div>
+      <div id="version-health" style="font-size:10px;color:var(--text-muted);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+        <span id="version-health-dot" style="width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0"></span>
+        <span id="version-health-label">Build <span id="sidebar-build"></span> · Prod</span>
+      </div>
       <button class="btn btn-secondary btn-sm" style="width:100%" onclick="doLogout()">Sair</button>
     </div>
   </div>
@@ -1230,24 +1234,44 @@
 <!-- UPDATE BANNER -->
 <div id="update-banner" style="display:none;position:fixed;bottom:20px;right:20px;z-index:9999;
   background:var(--grad1);color:#fff;padding:14px 20px;border-radius:12px;
-  box-shadow:0 8px 32px rgba(0,118,189,.35);max-width:320px;font-size:13px;font-weight:600;
-  display:flex;align-items:center;gap:12px;cursor:pointer" onclick="closeUpdateBanner()">
-  <span style="font-size:18px">✦</span>
-  <div>
-    <div id="update-banner-msg" style="font-weight:700"></div>
-    <div style="font-size:11px;opacity:.85;margin-top:2px">Seus dados e histórico estão preservados.</div>
+  box-shadow:0 8px 32px rgba(0,118,189,.35);max-width:340px;font-size:13px;font-weight:600;">
+  <div style="display:flex;align-items:center;gap:12px">
+    <span style="font-size:18px">✦</span>
+    <div style="flex:1">
+      <div id="update-banner-msg" style="font-weight:700"></div>
+      <div style="font-size:11px;opacity:.85;margin-top:2px">Seus dados e histórico estão preservados.</div>
+    </div>
+    <span onclick="closeUpdateBanner()" style="cursor:pointer;opacity:.7;font-size:16px;flex-shrink:0">✕</span>
   </div>
-  <span style="margin-left:auto;opacity:.7;font-size:16px">✕</span>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button onclick="activateNewVersion()" style="flex:1;background:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;padding:7px 0;font-size:12px;font-weight:700;cursor:pointer">↻ Ativar nova versão</button>
+    <button onclick="closeUpdateBanner()" style="background:transparent;border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.75);border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer">Depois</button>
+  </div>
 </div>
 
 <script>
 // ============================================================
 // VERSÃO E CHANGELOG
 // ============================================================
-const APP_VERSION = '2.0.0';
+const APP_VERSION = '2.1.0';
 const APP_VERSION_DATE = '2026-05-05';
+const APP_BUILD = '2026.05.05-2200';
+const APP_ENV = 'production';
 
 const CHANGELOG = [
+  {
+    version: '2.1.0', date: '2026-05-05', type: 'feature',
+    changes: [
+      '📱 Mobile-first completo: 4 breakpoints, safe area iOS, touch targets ≥44px',
+      '🃏 Histórico mobile: cards responsivos substituem tabela em telas pequenas',
+      '📧 Email Workflow Engine: 12 templates de evento, composer mailto, preview e log',
+      '🔒 Cache headers corretos no Netlify — index.html nunca fica preso em cache',
+      '🏷 Version Health Monitor: detecta divergência de versão client vs servidor',
+      '🔄 Banner de atualização com botão "Ativar nova versão" e recarga automática',
+      '📋 Versão visível com build e ambiente em desktop e mobile',
+      '🌐 Endpoint /version.json com versão, build e timestamp do deploy',
+    ]
+  },
   {
     version: '2.0.0', date: '2026-05-05', type: 'major',
     changes: [
@@ -1474,9 +1498,11 @@ function startApp() {
   document.getElementById('force-pw-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
 
-  // Versão na sidebar
+  // Versão e build na sidebar
   const svEl = document.getElementById('sidebar-version');
   if (svEl) svEl.textContent = APP_VERSION;
+  const sbEl = document.getElementById('sidebar-build');
+  if (sbEl) sbEl.textContent = APP_BUILD;
 
   // Banner de atualização: mostra se a versão mudou desde o último login
   const lastSeenVersion = localStorage.getItem('metax_last_seen_version');
@@ -1484,12 +1510,15 @@ function startApp() {
     const banner = document.getElementById('update-banner');
     const msg = document.getElementById('update-banner-msg');
     if (banner && msg) {
-      msg.textContent = `Meta.X atualizado para v${APP_VERSION}`;
-      banner.style.display = 'flex';
-      setTimeout(() => closeUpdateBanner(), 8000);
+      msg.textContent = `MTX Advisor atualizado para v${APP_VERSION}`;
+      banner.style.display = 'block';
+      setTimeout(() => closeUpdateBanner(), 12000);
     }
   }
   localStorage.setItem('metax_last_seen_version', APP_VERSION);
+
+  // Version Health Monitor: verifica se client está na mesma versão do servidor
+  checkVersionHealth();
 
   // Avatar
   const avatarEl = document.getElementById('sidebar-avatar');
@@ -1570,6 +1599,46 @@ function openChangelog() {
 function closeUpdateBanner() {
   const b = document.getElementById('update-banner');
   if (b) b.style.display = 'none';
+}
+
+function activateNewVersion() {
+  // Limpa cache localStorage de versão e recarrega
+  localStorage.removeItem('metax_last_seen_version');
+  if ('caches' in window) {
+    caches.keys().then(names => { names.forEach(n => caches.delete(n)); });
+  }
+  window.location.reload(true);
+}
+
+function checkVersionHealth() {
+  // Compara versão client com /version.json
+  fetch('/version.json?t=' + Date.now(), { cache: 'no-store' })
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (!data) return;
+      const dot = document.getElementById('version-health-dot');
+      const label = document.getElementById('version-health-label');
+      const isSync = data.version === APP_VERSION;
+      if (dot) dot.style.background = isSync ? '#22c55e' : '#ef4444';
+      if (label) {
+        label.innerHTML = isSync
+          ? `Build ${APP_BUILD} · Prod`
+          : `<span style="color:#ef4444;font-weight:700">⚠ v${APP_VERSION} ≠ servidor v${data.version}</span>`;
+      }
+      // Se versão do servidor é diferente, exibir banner
+      if (!isSync) {
+        const banner = document.getElementById('update-banner');
+        const msg = document.getElementById('update-banner-msg');
+        if (banner && msg && banner.style.display === 'none') {
+          msg.textContent = `Nova versão disponível: v${data.version}`;
+          banner.style.display = 'block';
+        }
+      }
+    })
+    .catch(() => {
+      const dot = document.getElementById('version-health-dot');
+      if (dot) dot.style.background = '#f59e0b';
+    });
 }
 
 // ============================================================
