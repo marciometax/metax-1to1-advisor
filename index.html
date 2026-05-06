@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>1:1 Advisor — Meta.X</title>
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js" crossorigin="anonymous" defer></script>
 <style>
   :root {
     /* Paleta MTX Advisor — Light Premium */
@@ -1254,6 +1255,41 @@
       <button class="modal-close" onclick="closeModal('view-session-modal')">✕</button>
     </div>
     <div class="modal-body" id="view-session-body"></div>
+  </div>
+</div>
+
+<!-- GRAPH API CONFIG MODAL -->
+<div class="modal-overlay" id="graph-config-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title">🔵 Configurar Microsoft 365</div>
+      <button class="modal-close" onclick="closeModal('graph-config-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert-card alert-info" style="margin-bottom:20px">
+        <div class="alert-body">Para envio direto sem abrir o Outlook, registre um App no <strong>Azure Active Directory</strong> e cole as credenciais abaixo. O sistema usará OAuth 2.0 para enviar e-mails via Microsoft Graph API.</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:20px;font-size:12px;color:var(--text2)">
+        <strong>Como obter:</strong><br>
+        1. Acesse <em>portal.azure.com</em> → Azure Active Directory → Registros de Aplicativo<br>
+        2. Novo registro → nome: MTX Advisor → Contas deste diretório<br>
+        3. URI de redirecionamento: <code style="background:var(--surface3,#e9ecef);padding:2px 6px;border-radius:4px">https://mtxadvisor.netlify.app</code><br>
+        4. Permissões de API: Mail.Send · Calendars.ReadWrite · User.Read<br>
+        5. Copie o <strong>ID do Aplicativo (cliente)</strong> e o <strong>ID do Diretório (locatário)</strong>
+      </div>
+      <div class="form-group">
+        <label>Client ID (ID do Aplicativo)</label>
+        <input type="text" id="gc-client-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>Tenant ID (ID do Diretório)</label>
+        <input type="text" id="gc-tenant-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-compact btn-ghost" onclick="closeModal('graph-config-modal')">Cancelar</button>
+      <button class="btn-compact" onclick="saveGraphConfigModal()">Salvar e Conectar</button>
+    </div>
   </div>
 </div>
 
@@ -4800,8 +4836,18 @@ function sendLastSessionByEmail(leaderId) {
   if (d.forMarcio) body += `PARA MÁRCIO:\n${d.forMarcio}\n\n`;
   body += '—\nEnviado via Meta.X 1:1 Advisor';
 
-  const mailto = `mailto:marcio.goicocheia@metax.ind.br?subject=${subject}&body=${encodeURIComponent(body)}`;
-  window.open(mailto, '_blank');
+  // Send via Graph API if configured, otherwise show toast
+  const htmlBody = previewEmailHTML('meeting.completed', leader);
+  if (isGraphConfigured()) {
+    const decodedSubject = decodeURIComponent(subject);
+    const logId = 'sess-email-' + Date.now();
+    enqueueEmail(EMAIL_FROM, decodedSubject, htmlBody || `<pre>${body}</pre>`, logId, { type:'session_summary', leaderId });
+    showToast(`Resumo do 1:1 adicionado à fila de envio para ${EMAIL_FROM}`, 'success');
+  } else {
+    const mailto = `mailto:marcio.goicocheia@metax.ind.br?subject=${subject}&body=${encodeURIComponent(body)}`;
+    window.open(mailto, '_blank');
+    showToast('Configure o Microsoft 365 para envio direto.', 'info');
+  }
 }
 
 // SEND WHATSAPP REMINDER
@@ -6766,17 +6812,196 @@ function composeEmail(event, leaderOrCeo, extraData = {}) {
   return { to: recipient.email, subject: tmpl.subject, body, entry };
 }
 
-function sendEmailMailto(event, leader, extraData = {}) {
+// ============================================================
+// GRAPH API EMAIL ENGINE
+// ============================================================
+const GRAPH_CONFIG_KEY = 'metax_graph_config';
+const EMAIL_QUEUE_KEY  = 'metax_email_queue';
+
+// In-memory MSAL instance (initialized on first use)
+let _msalInstance = null;
+let _graphToken = null;
+
+function getGraphConfig() {
+  try { return JSON.parse(localStorage.getItem(GRAPH_CONFIG_KEY)) || {}; } catch(e) { return {}; }
+}
+function saveGraphConfig(cfg) { localStorage.setItem(GRAPH_CONFIG_KEY, JSON.stringify(cfg)); }
+
+function isGraphConfigured() {
+  const c = getGraphConfig();
+  return !!(c.clientId && c.tenantId);
+}
+
+function getEmailQueue() {
+  try { return JSON.parse(localStorage.getItem(EMAIL_QUEUE_KEY)) || []; } catch(e) { return []; }
+}
+function saveEmailQueue(q) { localStorage.setItem(EMAIL_QUEUE_KEY, JSON.stringify(q)); }
+
+async function getMsalInstance() {
+  if (_msalInstance) return _msalInstance;
+  const cfg = getGraphConfig();
+  if (!cfg.clientId || !cfg.tenantId) return null;
+  if (typeof msal === 'undefined') return null;
+  _msalInstance = new msal.PublicClientApplication({
+    auth: { clientId: cfg.clientId, authority: `https://login.microsoftonline.com/${cfg.tenantId}` },
+    cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: false }
+  });
+  await _msalInstance.initialize();
+  return _msalInstance;
+}
+
+async function acquireGraphToken() {
+  if (_graphToken && _graphToken.expiresOn > new Date()) return _graphToken.accessToken;
+  const msalApp = await getMsalInstance();
+  if (!msalApp) return null;
+  const scopes = ['Mail.Send', 'Calendars.ReadWrite', 'User.Read', 'offline_access'];
+  try {
+    const accounts = msalApp.getAllAccounts();
+    if (accounts.length) {
+      const result = await msalApp.acquireTokenSilent({ scopes, account: accounts[0] });
+      _graphToken = result; return result.accessToken;
+    }
+  } catch(e) {}
+  try {
+    const result = await msalApp.acquireTokenPopup({ scopes });
+    _graphToken = result; return result.accessToken;
+  } catch(e) { return null; }
+}
+
+async function sendViaGraph(to, subject, htmlBody, logEntryId) {
+  const token = await acquireGraphToken();
+  if (!token) throw new Error('Token não disponível. Conecte o Microsoft 365 primeiro.');
+  const payload = {
+    message: {
+      subject,
+      body: { contentType: 'HTML', content: htmlBody },
+      toRecipients: [{ emailAddress: { address: to } }]
+    },
+    saveToSentItems: true
+  };
+  const resp = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `Graph API error ${resp.status}`);
+  }
+  return true;
+}
+
+function enqueueEmail(to, subject, htmlBody, logEntryId, metadata = {}) {
+  const queue = getEmailQueue();
+  queue.push({
+    id: 'eq-' + Date.now(),
+    to, subject, htmlBody, logEntryId, metadata,
+    status: 'pending',
+    attempts: 0,
+    nextRetry: Date.now(),
+    createdAt: new Date().toISOString()
+  });
+  saveEmailQueue(queue);
+  processEmailQueue();
+}
+
+const RETRY_DELAYS = [30000, 300000, 1800000]; // 30s, 5min, 30min
+
+async function processEmailQueue() {
+  const queue = getEmailQueue();
+  const pending = queue.filter(e => e.status === 'pending' && e.nextRetry <= Date.now());
+  for (const item of pending) {
+    item.status = 'processing';
+    saveEmailQueue(queue);
+    try {
+      await sendViaGraph(item.to, item.subject, item.htmlBody, item.logEntryId);
+      item.status = 'sent';
+      item.sentAt = new Date().toISOString();
+      // Update email log
+      const log = getEmailLog();
+      const entry = log.find(e => e.id === item.logEntryId);
+      if (entry) { entry.status = 'sent'; entry.sentAt = item.sentAt; saveEmailLog(log); }
+      saveEmailQueue(queue);
+    } catch(err) {
+      item.attempts = (item.attempts || 0) + 1;
+      if (item.attempts >= RETRY_DELAYS.length + 1) {
+        item.status = 'failed';
+        item.error = err.message;
+        // Update log
+        const log = getEmailLog();
+        const entry = log.find(e => e.id === item.logEntryId);
+        if (entry) { entry.status = 'failed'; entry.error = err.message; saveEmailLog(log); }
+      } else {
+        item.status = 'pending';
+        item.nextRetry = Date.now() + (RETRY_DELAYS[item.attempts - 1] || 1800000);
+        item.error = err.message;
+      }
+      saveEmailQueue(queue);
+    }
+  }
+}
+
+// Start queue processor on page load
+setInterval(processEmailQueue, 15000);
+
+async function sendEmailDirect(event, leader, extraData = {}) {
+  if (!currentUser?.isAdmin) { showToast('Apenas o administrador pode enviar e-mails.', 'warning'); return; }
   const result = composeEmail(event, leader, extraData);
   if (!result) return;
-  const { to, subject, body } = result;
-  const mailto = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}&from=${encodeURIComponent(EMAIL_FROM)}`;
-  window.location.href = mailto;
-  showToast(`E-mail composto para ${to}`, 'success');
-  // Mark as sent in log
+  const htmlBody = previewEmailHTML(event, leader);
+  const { to, subject } = result;
+
+  if (!isGraphConfigured()) {
+    // Fallback: abrir modal de configuração
+    showToast('Configure o Microsoft 365 para envio direto.', 'warning');
+    openGraphConfigModal();
+    return;
+  }
+
+  // Update log status to queued
   const log = getEmailLog();
   const entry = log.find(e => e.id === result.entry.id);
-  if (entry) { entry.status = 'sent_via_mailto'; saveEmailLog(log); }
+  if (entry) { entry.status = 'queued'; saveEmailLog(log); }
+
+  enqueueEmail(to, subject, htmlBody, result.entry.id, { event, leaderId: leader?.id });
+  showToast(`E-mail adicionado à fila de envio para ${to}`, 'success');
+}
+
+// Legacy alias kept for callers outside the workflow tab
+function sendEmailMailto(event, leader, extraData = {}) {
+  sendEmailDirect(event, leader, extraData);
+}
+
+function openGraphConfigModal() {
+  const cfg = getGraphConfig();
+  const modal = document.getElementById('graph-config-modal');
+  if (!modal) return;
+  document.getElementById('gc-client-id').value = cfg.clientId || '';
+  document.getElementById('gc-tenant-id').value = cfg.tenantId || '';
+  modal.classList.add('open');
+}
+
+function saveGraphConfigModal() {
+  const clientId = document.getElementById('gc-client-id').value.trim();
+  const tenantId = document.getElementById('gc-tenant-id').value.trim();
+  if (!clientId || !tenantId) { showToast('Preencha Client ID e Tenant ID.', 'warning'); return; }
+  saveGraphConfig({ clientId, tenantId });
+  _msalInstance = null; _graphToken = null;
+  closeModal('graph-config-modal');
+  showToast('Microsoft 365 configurado. Conectando...', 'success');
+  // Trigger sign-in
+  getMsalInstance().then(app => {
+    if (app) app.acquireTokenPopup({ scopes: ['Mail.Send','Calendars.ReadWrite','User.Read','offline_access'] })
+      .then(r => { _graphToken = r; showToast('Conta Microsoft conectada com sucesso!', 'success'); renderNotificationsPage(); })
+      .catch(() => showToast('Login Microsoft cancelado.', 'warning'));
+  });
+}
+
+async function connectMicrosoft365() {
+  if (!isGraphConfigured()) { openGraphConfigModal(); return; }
+  const token = await acquireGraphToken();
+  if (token) showToast('Microsoft 365 já conectado.', 'success');
+  else openGraphConfigModal();
 }
 
 function previewEmailHTML(event, leader) {
@@ -6858,19 +7083,47 @@ function renderEmailWorkflowTab() {
     </div>`;
   }).join('') || '<div class="text-sm text-muted" style="padding:16px 0">Nenhum e-mail composto ainda.</div>';
 
+  // Graph status
+  const graphCfg = getGraphConfig();
+  const graphOk = isGraphConfigured();
+  const queue = getEmailQueue();
+  const qPending = queue.filter(e=>e.status==='pending'||e.status==='processing').length;
+  const qSent    = queue.filter(e=>e.status==='sent').length;
+  const qFailed  = queue.filter(e=>e.status==='failed').length;
+  const todaySent = log.filter(e=>e.status==='sent'&&e.ts&&e.ts.slice(0,10)===new Date().toISOString().slice(0,10)).length;
+
   return `
-    <!-- Config header -->
+    <!-- Status Graph API -->
     <div class="card mb-20">
       <div class="card-title">📧 E-mail Workflow Engine</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div style="border:1.5px solid ${graphOk?'rgba(34,197,94,.3)':'rgba(239,68,68,.2)'};border-radius:12px;padding:14px;background:${graphOk?'rgba(34,197,94,.04)':'rgba(239,68,68,.03)'}">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="width:9px;height:9px;border-radius:50%;background:${graphOk?'#22c55e':'#ef4444'};flex-shrink:0"></span>
+            <span style="font-size:12px;font-weight:700">${graphOk?'Microsoft 365 Configurado':'Microsoft 365 Não Configurado'}</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3)">${graphOk?`Client: ${graphCfg.clientId?.slice(0,8)}...`:'Clique em Configurar para conectar'}</div>
+          <button class="btn-compact ${graphOk?'btn-ghost':''}" style="margin-top:10px;height:30px;font-size:12px" onclick="connectMicrosoft365()">${graphOk?'↺ Reconectar':'⚙ Configurar'}</button>
+        </div>
+        <div style="border:1.5px solid var(--border);border-radius:12px;padding:14px">
+          <div style="font-size:12px;font-weight:700;margin-bottom:8px">📊 Estatísticas</div>
+          <div style="font-size:12px;color:var(--text2);display:flex;flex-direction:column;gap:4px">
+            <div>Enviados hoje: <strong>${todaySent}</strong></div>
+            <div>Na fila: <strong style="color:${qPending?'var(--warning)':'var(--text)'}">${qPending}</strong></div>
+            <div>Falhas: <strong style="color:${qFailed?'var(--danger)':'var(--text)'}">${qFailed}</strong></div>
+            <div>Total enviados: <strong>${qSent}</strong></div>
+          </div>
+        </div>
+      </div>
       <div class="data-grid">
         <div class="data-row"><span class="text-sm">Remetente</span><span class="fw-600 text-sm">${EMAIL_FROM_NAME}</span></div>
         <div class="data-row"><span class="text-sm">E-mail</span><span class="fw-600 text-sm" style="color:var(--accent)">${EMAIL_FROM}</span></div>
-        <div class="data-row"><span class="text-sm">Canal</span><span class="text-sm">Microsoft 365 / Outlook (mailto via cliente)</span></div>
+        <div class="data-row"><span class="text-sm">Canal</span><span class="text-sm">${graphOk?'Microsoft Graph API (envio direto)':'Não configurado — configure o Microsoft 365'}</span></div>
         <div class="data-row"><span class="text-sm">Templates ativos</span><span class="fw-700">${Object.keys(EMAIL_TEMPLATES).length}</span></div>
       </div>
-      <div class="alert-card alert-info" style="margin-top:16px;margin-bottom:0">
-        <div class="alert-body"><strong>Como funciona:</strong> Selecione o evento e o líder. O sistema preenche o template HTML com os dados e abre o Outlook/cliente de e-mail pronto para enviar. Para automação completa, configure o Microsoft Graph API com a conta ${EMAIL_FROM}.</div>
-      </div>
+      ${!graphOk?`<div class="alert-card" style="margin-top:16px;margin-bottom:0;background:rgba(239,68,68,.06);border-color:rgba(239,68,68,.25)">
+        <div class="alert-body"><strong>Ação necessária:</strong> Configure o Microsoft 365 para enviar e-mails diretamente pela plataforma, sem abrir o Outlook. <button class="btn-compact" style="margin-top:8px;height:30px;font-size:12px" onclick="openGraphConfigModal()">⚙ Configurar agora</button></div>
+      </div>`:''}
     </div>
 
     <!-- Compose -->
@@ -6894,15 +7147,31 @@ function renderEmailWorkflowTab() {
         </div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn btn-secondary btn-sm" onclick="previewSelectedEmail()">👁 Pré-visualizar</button>
-        <button class="btn btn-primary btn-sm" onclick="sendSelectedEmail()">📧 Abrir no Outlook</button>
+        <button class="btn-compact btn-ghost" onclick="previewSelectedEmail()">👁 Pré-visualizar</button>
+        <button class="btn-compact" onclick="sendSelectedEmail()">${graphOk?'📧 Enviar E-mail':'📧 Enviar E-mail'}</button>
       </div>
+      ${!graphOk?`<div style="margin-top:10px;font-size:12px;color:var(--warning)">⚠ Microsoft 365 não configurado — configure para envio direto sem abrir o Outlook.</div>`:''}
       <div id="email-preview-area" style="margin-top:16px;display:none">
         <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;max-height:400px;overflow-y:auto">
           <iframe id="email-preview-iframe" style="width:100%;border:none;height:400px" title="Preview do e-mail"></iframe>
         </div>
       </div>
     </div>
+
+    <!-- Queue -->
+    ${queue.length ? `<div class="card mb-20">
+      <div class="card-title">📤 Fila de Envio (${queue.length})</div>
+      ${queue.slice(-20).reverse().map(item => {
+        const statusColor = { pending:'var(--warning)', processing:'var(--accent)', sent:'var(--success)', failed:'var(--danger)' };
+        const statusLabel = { pending:'Na fila', processing:'Enviando...', sent:'Enviado', failed:'Falhou' };
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px">
+          <span style="width:8px;height:8px;border-radius:50%;background:${statusColor[item.status]||'var(--text3)'};flex-shrink:0"></span>
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.to} — ${item.subject?.slice(0,40)||''}</span>
+          <span class="badge ${item.status==='sent'?'badge-green':item.status==='failed'?'badge-red':item.status==='processing'?'badge-blue':'badge-yellow'}">${statusLabel[item.status]||item.status}</span>
+          ${item.attempts>0?`<span style="color:var(--text3)">${item.attempts}x</span>`:''}
+        </div>`;
+      }).join('')}
+    </div>` : ''}
 
     <!-- Event catalog -->
     <div class="card mb-20">
@@ -6981,7 +7250,7 @@ function sendSelectedEmail() {
     ? { name: 'Márcio Goicocheia', email: EMAIL_FROM }
     : store.leaders.find(l => l.id === leaderId);
   if (!leader) return;
-  sendEmailMailto(eventKey, leader);
+  sendEmailDirect(eventKey, leader);
 }
 
 // Init
