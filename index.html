@@ -53,7 +53,10 @@
   .auth-logo .sub { font-size:13px; color:var(--text3); margin-top:4px; }
   .form-group { margin-bottom: 18px; }
   label { display: block; font-size: 11px; color: var(--text2); margin-bottom: 7px; font-weight: 700; text-transform:uppercase; letter-spacing:.8px; }
-  input[type=text], input[type=password], input[type=email], textarea, select {
+  .form-label { display:block; font-size:11px; color:var(--text2); margin-bottom:6px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; }
+  .form-input { width:100%; background:var(--surface2); border:1.5px solid var(--border); border-radius:10px; color:var(--text); padding:10px 14px; font-size:14px; outline:none; transition:border-color .2s,box-shadow .2s; box-sizing:border-box; font-family:inherit; }
+  .form-input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(0,118,189,.10); background:#fff; }
+  input[type=text], input[type=password], input[type=email], input[type=date], input[type=time], textarea, select {
     width: 100%; background: var(--surface2); border: 1.5px solid var(--border); border-radius: 10px;
     color: var(--text); padding: 12px 16px; font-size: 15px; outline: none; transition: border-color .2s, box-shadow .2s;
   }
@@ -547,6 +550,32 @@
 
   /* Teams banner */
   .teams-connect-banner { background:linear-gradient(135deg,rgba(0,118,189,.08) 0%,rgba(0,156,166,.06) 100%); border:1px solid rgba(0,118,189,.2); border-radius:12px; padding:16px 20px; display:flex; align-items:center; gap:16px; margin-bottom:20px; }
+
+  /* Agendamento modal */
+  .sched-steps { display:flex; gap:0; margin-bottom:24px; counter-reset:step; }
+  .sched-step { flex:1; text-align:center; font-size:12px; font-weight:600; color:var(--text3); position:relative; }
+  .sched-step::before { counter-increment:step; content:counter(step); display:block; width:28px; height:28px; border-radius:50%; background:var(--surface2); border:2px solid var(--border); margin:0 auto 6px; line-height:24px; font-size:12px; font-weight:700; transition:all .2s; }
+  .sched-step.active { color:var(--accent); }
+  .sched-step.active::before { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .sched-step.done { color:var(--success); }
+  .sched-step.done::before { background:var(--success); border-color:var(--success); color:#fff; content:'✓'; }
+  .sched-step+.sched-step::after { content:''; position:absolute; top:13px; right:50%; left:-50%; height:2px; background:var(--border); z-index:-1; }
+  .sched-step.done+.sched-step::after { background:var(--success); }
+  .sched-leader-card { border:2px solid var(--border); border-radius:12px; padding:12px 16px; cursor:pointer; display:flex; align-items:center; gap:12px; transition:all .15s; margin-bottom:8px; }
+  .sched-leader-card:hover { border-color:var(--accent); background:rgba(0,118,189,.04); }
+  .sched-leader-card.selected { border-color:var(--accent); background:rgba(0,118,189,.06); }
+  .sched-leader-avatar { width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; color:#fff; flex-shrink:0; }
+  .sched-type-btn { border:2px solid var(--border); border-radius:10px; padding:10px 14px; cursor:pointer; font-size:13px; font-weight:500; background:var(--surface); transition:all .15s; text-align:left; }
+  .sched-type-btn:hover { border-color:var(--accent); }
+  .sched-type-btn.selected { border-color:var(--accent); background:rgba(0,118,189,.06); color:var(--accent); font-weight:700; }
+  .sched-dur-btn { border:2px solid var(--border); border-radius:8px; padding:8px 14px; cursor:pointer; font-size:13px; font-weight:600; background:var(--surface); transition:all .15s; }
+  .sched-dur-btn:hover { border-color:var(--accent); }
+  .sched-dur-btn.selected { border-color:var(--accent); background:rgba(0,118,189,.08); color:var(--accent); }
+  .ev-blue-scheduled { background:rgba(0,118,189,.15); color:#0076BD; border:1px solid rgba(0,118,189,.3); }
+  .scheduled-card { border:1px solid rgba(0,118,189,.25); border-radius:12px; padding:16px; background:rgba(0,118,189,.03); margin-bottom:12px; }
+  .scheduled-card-header { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+  .sched-confirm-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
+  .sched-confirm-row:last-child { border-bottom:none; }
 
   @media (max-width:900px) {
     .my1on1-kpi-grid { grid-template-columns:1fr 1fr; }
@@ -1220,6 +1249,38 @@
   </div>
 </div>
 
+<!-- AGENDAR 1:1 MODAL -->
+<div class="modal-overlay" id="sched-modal">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <div class="modal-title">📅 Agendar Reunião 1:1</div>
+      <button class="modal-close" onclick="closeSchedModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="sched-steps" id="sched-steps-indicator">
+        <div class="sched-step active" id="sched-step-1">Líder</div>
+        <div class="sched-step" id="sched-step-2">Data e Hora</div>
+        <div class="sched-step" id="sched-step-3">Pauta</div>
+        <div class="sched-step" id="sched-step-4">Confirmar</div>
+      </div>
+      <div id="sched-body"></div>
+    </div>
+    <div class="modal-footer" id="sched-footer"></div>
+  </div>
+</div>
+
+<!-- VIEW SCHEDULED MEETING MODAL -->
+<div class="modal-overlay" id="view-sched-modal">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-header">
+      <div class="modal-title" id="view-sched-title">Reunião Agendada</div>
+      <button class="modal-close" onclick="closeModal('view-sched-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="view-sched-body"></div>
+    <div class="modal-footer" id="view-sched-footer"></div>
+  </div>
+</div>
+
 <!-- CHANGELOG MODAL -->
 <div class="modal-overlay" id="changelog-modal">
   <div class="modal" style="max-width:600px">
@@ -1366,6 +1427,7 @@ function migrateStore(s) {
   if (!s.actionItems) s.actionItems = [];
   if (!s.users) s.users = [];
   if (!s.leaders) s.leaders = [];
+  if (!s.scheduledMeetings) s.scheduledMeetings = [];
   // Garante campos opcionais em líderes sem sobrescrever dados existentes
   s.leaders = s.leaders.map(l => ({
     whatsapp: '', title: '', notes: '', photo: null,
@@ -1399,7 +1461,8 @@ function initStore() {
       prompts: [],    // biblioteca de prompts
       teaches: [],    // respostas do "Ensinar CEO Digital"
       refinements: [] // histórico de refinamentos
-    }
+    },
+    scheduledMeetings: []
   };
 }
 
@@ -1410,6 +1473,19 @@ let currentUser = null;
 let currentLeader = null; // when marcio selects a leader
 let anamneseState = { step: 0, answers: {}, leaderId: null };
 let sessionState = { step: 0, leaderId: null, data: {} };
+
+// Scheduling state
+let schedState = {
+  step: 1,
+  leaderId: null,
+  date: '',
+  timeStart: '09:00',
+  duration: 60,
+  meetingType: '1on1_regular',
+  agenda: '',
+  message: '',
+  editingId: null
+};
 
 // ============================================================
 // AUTH
@@ -1639,6 +1715,372 @@ function checkVersionHealth() {
       const dot = document.getElementById('version-health-dot');
       if (dot) dot.style.background = '#f59e0b';
     });
+}
+
+// ============================================================
+// AGENDAMENTO DE 1:1
+// ============================================================
+
+const MEETING_TYPES = {
+  '1on1_regular':    { label: '1:1 Regular',               icon: '🔄', color: '#0076BD' },
+  '1on1_critico':    { label: '1:1 de Alinhamento Crítico', icon: '🔴', color: '#ef4444' },
+  '1on1_desenv':     { label: '1:1 de Desenvolvimento',     icon: '📈', color: '#22c55e' },
+  '1on1_plano':      { label: '1:1 de Plano de Ação',       icon: '📋', color: '#f59e0b' },
+  '1on1_feedback':   { label: '1:1 de Feedback',            icon: '💬', color: '#8b5cf6' },
+};
+
+const SCHED_STEPS = ['Líder','Data e Hora','Pauta','Confirmar'];
+
+function openSchedModal(leaderId) {
+  schedState = {
+    step: 1,
+    leaderId: leaderId || null,
+    date: '',
+    timeStart: '09:00',
+    duration: 60,
+    meetingType: '1on1_regular',
+    agenda: '',
+    message: '',
+    editingId: null
+  };
+  document.getElementById('sched-modal').classList.add('open');
+  renderSchedStep();
+}
+
+function closeSchedModal() {
+  document.getElementById('sched-modal').classList.remove('open');
+}
+
+function renderSchedStep() {
+  // Update step indicators
+  SCHED_STEPS.forEach((_, i) => {
+    const el = document.getElementById('sched-step-' + (i+1));
+    if (!el) return;
+    el.className = 'sched-step';
+    if (i+1 < schedState.step) el.classList.add('done');
+    else if (i+1 === schedState.step) el.classList.add('active');
+  });
+
+  const body = document.getElementById('sched-body');
+  const footer = document.getElementById('sched-footer');
+
+  if (schedState.step === 1) {
+    // STEP 1: Selecionar líder
+    const leaders = store.leaders;
+    const searchVal = document.getElementById('sched-leader-search')?.value?.toLowerCase() || '';
+    const filtered = leaders.filter(l => !searchVal || l.name.toLowerCase().includes(searchVal) || l.area.toLowerCase().includes(searchVal));
+
+    body.innerHTML = `
+      <div style="margin-bottom:16px">
+        <input id="sched-leader-search" type="text" class="form-input" placeholder="🔍 Buscar líder por nome ou área..." oninput="renderSchedStep()" value="${searchVal}" autocomplete="off" style="width:100%">
+      </div>
+      <div style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
+        ${filtered.map(l => {
+          const ls = store.sessions.filter(s=>s.leaderId===l.id).sort((a,b)=>new Date(b.dateISO)-new Date(a.dateISO));
+          const lastDate = ls[0] ? new Date(ls[0].dateISO).toLocaleDateString('pt-BR') : 'Nunca';
+          const risk = calcRiskScore ? calcRiskScore(l) : null;
+          const riskBadge = risk ? `<span class="badge badge-${risk.level==='red'?'red':risk.level==='yellow'?'yellow':'green'}" style="font-size:10px">Risco ${risk.label||risk.level}</span>` : '';
+          const avatarContent = l.photo ? `<img src="${l.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : l.name[0];
+          return `<div class="sched-leader-card ${schedState.leaderId===l.id?'selected':''}" onclick="schedSelectLeader('${l.id}')">
+            <div class="sched-leader-avatar" style="background:${l.color||'#0076BD'}">${avatarContent}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:14px">${l.name} ${schedState.leaderId===l.id?'<span style="color:var(--accent)">✓</span>':''}</div>
+              <div style="font-size:12px;color:var(--text3)">${l.area} · ${l.email}</div>
+              <div style="display:flex;gap:6px;margin-top:4px;align-items:center;flex-wrap:wrap">
+                <span style="font-size:11px;color:var(--text3)">Último 1:1: ${lastDate}</span>
+                ${riskBadge}
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+        ${filtered.length===0?'<div class="text-sm text-muted" style="text-align:center;padding:20px">Nenhum líder encontrado</div>':''}
+      </div>`;
+
+    footer.innerHTML = `
+      <button class="btn btn-secondary" onclick="closeSchedModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="schedNext()" ${!schedState.leaderId?'disabled':''}>Próximo →</button>`;
+
+  } else if (schedState.step === 2) {
+    // STEP 2: Data, hora, duração, tipo
+    const todayStr = new Date().toISOString().slice(0,10);
+    body.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div>
+          <label class="form-label">📅 Data da Reunião *</label>
+          <input type="date" class="form-input" id="sched-date" min="${todayStr}" value="${schedState.date}" onchange="schedState.date=this.value">
+        </div>
+        <div>
+          <label class="form-label">⏰ Horário de Início *</label>
+          <input type="time" class="form-input" id="sched-time" value="${schedState.timeStart}" onchange="schedState.timeStart=this.value">
+        </div>
+      </div>
+      <div style="margin-bottom:20px">
+        <label class="form-label">⏱ Duração</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${[['30','30 min'],['45','45 min'],['60','60 min'],['90','90 min']].map(([v,l]) =>
+            `<button class="sched-dur-btn ${schedState.duration==v?'selected':''}" onclick="schedState.duration=${v};renderSchedStep()">${l}</button>`
+          ).join('')}
+        </div>
+      </div>
+      <div style="margin-bottom:20px">
+        <label class="form-label">📌 Tipo de Reunião</label>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${Object.entries(MEETING_TYPES).map(([k,v]) =>
+            `<button class="sched-type-btn ${schedState.meetingType===k?'selected':''}" onclick="schedState.meetingType='${k}';renderSchedStep()">${v.icon} ${v.label}</button>`
+          ).join('')}
+        </div>
+      </div>
+      <div style="background:rgba(0,118,189,.06);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--text2)">
+        🔵 <strong>Local:</strong> Microsoft Teams — link gerado automaticamente ao confirmar
+      </div>`;
+
+    footer.innerHTML = `
+      <button class="btn btn-secondary" onclick="schedBack()">← Voltar</button>
+      <button class="btn btn-primary" onclick="schedNext()">Próximo →</button>`;
+
+  } else if (schedState.step === 3) {
+    // STEP 3: Pauta e mensagem
+    const leader = store.leaders.find(l=>l.id===schedState.leaderId);
+    const mt = MEETING_TYPES[schedState.meetingType];
+    const defaultMsg = schedBuildDefaultMessage(leader);
+    if (!schedState.message) schedState.message = defaultMsg;
+
+    body.innerHTML = `
+      <div style="margin-bottom:16px">
+        <label class="form-label">📋 Pauta / Temas (opcional)</label>
+        <textarea class="form-input" id="sched-agenda" rows="4" placeholder="Ex: Entregas da semana, plano de ação, riscos, decisões pendentes..." style="resize:vertical">${schedState.agenda}</textarea>
+      </div>
+      <div>
+        <label class="form-label" style="display:flex;justify-content:space-between;align-items:center">
+          <span>✉️ Mensagem ao Líder</span>
+          <button class="btn btn-secondary btn-sm" style="font-size:11px" onclick="schedResetMessage()">↺ Restaurar padrão</button>
+        </label>
+        <textarea class="form-input" id="sched-message" rows="10" style="resize:vertical;font-size:13px">${schedState.message}</textarea>
+      </div>`;
+
+    footer.innerHTML = `
+      <button class="btn btn-secondary" onclick="schedBack()">← Voltar</button>
+      <button class="btn btn-primary" onclick="schedSaveStep3()">Próximo →</button>`;
+
+  } else if (schedState.step === 4) {
+    // STEP 4: Confirmação
+    const leader = store.leaders.find(l=>l.id===schedState.leaderId);
+    const mt = MEETING_TYPES[schedState.meetingType];
+    const dateFormatted = schedState.date ? new Date(schedState.date + 'T12:00').toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' }) : '—';
+    const endTime = schedCalcEndTime(schedState.timeStart, schedState.duration);
+
+    body.innerHTML = `
+      <div class="card" style="margin:0 0 16px;background:rgba(0,118,189,.04);border-color:rgba(0,118,189,.2)">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <div style="width:44px;height:44px;border-radius:50%;background:${leader.color||'#0076BD'};display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:16px;flex-shrink:0">
+            ${leader.photo ? `<img src="${leader.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : leader.name[0]}
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:15px">${leader.name}</div>
+            <div style="font-size:12px;color:var(--text3)">${leader.area} · ${leader.email}</div>
+          </div>
+        </div>
+        <div>
+          <div class="sched-confirm-row"><span class="text-muted">Tipo</span><span style="font-weight:600">${mt.icon} ${mt.label}</span></div>
+          <div class="sched-confirm-row"><span class="text-muted">Data</span><span style="font-weight:600">${dateFormatted}</span></div>
+          <div class="sched-confirm-row"><span class="text-muted">Horário</span><span style="font-weight:600">${schedState.timeStart} – ${endTime} (${schedState.duration} min)</span></div>
+          <div class="sched-confirm-row"><span class="text-muted">Local</span><span style="font-weight:600">🔵 Microsoft Teams</span></div>
+          ${schedState.agenda ? `<div class="sched-confirm-row"><span class="text-muted">Pauta</span><span style="font-weight:600;max-width:280px;text-align:right">${schedState.agenda.slice(0,80)}${schedState.agenda.length>80?'...':''}</span></div>` : ''}
+        </div>
+      </div>
+      <div class="alert-info" style="font-size:12px;margin:0">
+        <strong>O que acontece ao confirmar:</strong><br>
+        ✓ Reunião registrada no MTX Advisor &nbsp;|&nbsp;
+        ✓ Notificação criada &nbsp;|&nbsp;
+        ✓ Convite enviado via Teams/Outlook &nbsp;|&nbsp;
+        ✓ Lembrete 24h antes programado
+      </div>`;
+
+    footer.innerHTML = `
+      <button class="btn btn-secondary" onclick="schedBack()">← Voltar</button>
+      <button class="btn btn-primary" onclick="schedConfirm()" style="min-width:140px">📅 Agendar 1:1</button>`;
+  }
+}
+
+function schedSelectLeader(id) {
+  schedState.leaderId = id;
+  renderSchedStep();
+}
+
+function schedNext() {
+  if (schedState.step === 1 && !schedState.leaderId) return;
+  if (schedState.step === 2) {
+    const dateEl = document.getElementById('sched-date');
+    const timeEl = document.getElementById('sched-time');
+    if (dateEl) schedState.date = dateEl.value;
+    if (timeEl) schedState.timeStart = timeEl.value;
+    if (!schedState.date) { showToast('Selecione uma data', 'warning'); return; }
+    if (!schedState.timeStart) { showToast('Selecione o horário', 'warning'); return; }
+    const selDate = new Date(schedState.date + 'T00:00');
+    const today = new Date(); today.setHours(0,0,0,0);
+    if (selDate < today) { showToast('Selecione uma data futura', 'warning'); return; }
+  }
+  schedState.step++;
+  renderSchedStep();
+}
+
+function schedBack() {
+  schedState.step = Math.max(1, schedState.step - 1);
+  renderSchedStep();
+}
+
+function schedSaveStep3() {
+  const agendaEl = document.getElementById('sched-agenda');
+  const msgEl = document.getElementById('sched-message');
+  if (agendaEl) schedState.agenda = agendaEl.value;
+  if (msgEl) schedState.message = msgEl.value;
+  schedState.step = 4;
+  renderSchedStep();
+}
+
+function schedResetMessage() {
+  const leader = store.leaders.find(l=>l.id===schedState.leaderId);
+  schedState.message = schedBuildDefaultMessage(leader);
+  const el = document.getElementById('sched-message');
+  if (el) el.value = schedState.message;
+}
+
+function schedBuildDefaultMessage(leader) {
+  if (!leader) return '';
+  const mt = MEETING_TYPES[schedState.meetingType] || MEETING_TYPES['1on1_regular'];
+  return `Olá, ${leader.name}.\n\nEstou agendando nosso próximo 1:1 pelo MTX Advisor.\n\nTipo: ${mt.label}\n\nObjetivo da conversa:\n- revisar entregas;\n- acompanhar planos de ação;\n- alinhar prioridades;\n- tratar pontos de liderança;\n- definir próximos passos.\n\nPrepare-se trazendo:\n- principais entregas desde o último alinhamento;\n- riscos ou bloqueios;\n- decisões pendentes;\n- plano de ação atualizado;\n- pontos em que precisa de apoio.\n\nPergunta de preparação:\n"O que precisa sair decidido desta conversa para que sua execução avance?"\n\nAté lá.\n\nMárcio Goicocheia\nMTX Advisor`;
+}
+
+function schedCalcEndTime(startTime, durationMin) {
+  const [h, m] = startTime.split(':').map(Number);
+  const total = h * 60 + m + durationMin;
+  return `${String(Math.floor(total/60)).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`;
+}
+
+function schedConfirm() {
+  const leader = store.leaders.find(l=>l.id===schedState.leaderId);
+  if (!leader) return;
+
+  const meetingId = 'mtg-' + Date.now();
+  const endTime = schedCalcEndTime(schedState.timeStart, schedState.duration);
+  const mt = MEETING_TYPES[schedState.meetingType];
+
+  // Gera Teams deep link
+  const startISO = `${schedState.date}T${schedState.timeStart}:00`;
+  const endISO   = `${schedState.date}T${endTime}:00`;
+  const subject = encodeURIComponent(`1:1 | ${leader.name} | MTX Advisor`);
+  const attendees = encodeURIComponent(leader.email);
+  const teamsLink = `https://teams.microsoft.com/l/meeting/new?subject=${subject}&startTime=${encodeURIComponent(startISO)}&endTime=${encodeURIComponent(endISO)}&attendees=${attendees}&content=${encodeURIComponent(schedState.message)}`;
+
+  // Salva no store
+  const meeting = {
+    id: meetingId,
+    leaderId: leader.id,
+    leaderName: leader.name,
+    leaderEmail: leader.email,
+    date: schedState.date,
+    timeStart: schedState.timeStart,
+    timeEnd: endTime,
+    duration: schedState.duration,
+    meetingType: schedState.meetingType,
+    agenda: schedState.agenda,
+    message: schedState.message,
+    teamsLink,
+    status: 'scheduled',
+    createdAt: new Date().toISOString(),
+    createdBy: currentUser?.email || 'marcio',
+    reminderSent: false
+  };
+
+  if (!store.scheduledMeetings) store.scheduledMeetings = [];
+  store.scheduledMeetings.push(meeting);
+  saveStore();
+
+  // Auditoria
+  auditLog('meeting_scheduled', { meetingId, leaderId: leader.id, date: schedState.date, time: schedState.timeStart });
+
+  // Notificação interna
+  addNotification('session_scheduled', `1:1 agendado — ${leader.name}`,
+    `${mt.label} com ${leader.name} em ${new Date(schedState.date+'T12:00').toLocaleDateString('pt-BR')} às ${schedState.timeStart}`,
+    { leaderId: leader.id, meetingId });
+
+  // Fechar modal
+  closeSchedModal();
+
+  // Recarregar calendário
+  if (document.getElementById('page-my1on1')?.classList.contains('active')) renderMy1on1();
+
+  // Abrir Teams para confirmar agendamento
+  setTimeout(() => {
+    showToast(`1:1 com ${leader.name} agendado! Abrindo Teams para confirmar...`, 'success');
+    setTimeout(() => { window.open(teamsLink, '_blank'); }, 1200);
+  }, 300);
+}
+
+function viewScheduledMeeting(meetingId) {
+  const m = (store.scheduledMeetings||[]).find(x=>x.id===meetingId);
+  if (!m) return;
+  const leader = store.leaders.find(l=>l.id===m.leaderId);
+  const mt = MEETING_TYPES[m.meetingType] || MEETING_TYPES['1on1_regular'];
+  const dateFormatted = new Date(m.date+'T12:00').toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  const statusMap = { scheduled:'Agendado', done:'Realizado', cancelled:'Cancelado', rescheduled:'Reagendado' };
+  const statusBadge = { scheduled:'badge-blue', done:'badge-green', cancelled:'badge-red', rescheduled:'badge-yellow' };
+
+  document.getElementById('view-sched-title').textContent = `${mt.icon} ${mt.label} — ${m.leaderName}`;
+  document.getElementById('view-sched-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
+      <div class="sched-confirm-row"><span class="text-muted">Status</span><span><span class="badge ${statusBadge[m.status]||'badge-gray'}">${statusMap[m.status]||m.status}</span></span></div>
+      <div class="sched-confirm-row"><span class="text-muted">Líder</span><span style="font-weight:700">${m.leaderName}</span></div>
+      <div class="sched-confirm-row"><span class="text-muted">E-mail</span><span>${m.leaderEmail}</span></div>
+      <div class="sched-confirm-row"><span class="text-muted">Data</span><span style="font-weight:600">${dateFormatted}</span></div>
+      <div class="sched-confirm-row"><span class="text-muted">Horário</span><span>${m.timeStart} – ${m.timeEnd} (${m.duration} min)</span></div>
+      <div class="sched-confirm-row"><span class="text-muted">Tipo</span><span>${mt.icon} ${mt.label}</span></div>
+      ${m.agenda ? `<div class="sched-confirm-row"><span class="text-muted">Pauta</span><span style="max-width:280px;text-align:right;font-size:12px">${m.agenda}</span></div>` : ''}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${m.teamsLink ? `<a href="${m.teamsLink}" target="_blank" class="btn btn-primary" style="text-align:center;text-decoration:none">🔵 Entrar no Teams</a>` : ''}
+    </div>`;
+
+  document.getElementById('view-sched-footer').innerHTML = `
+    <button class="btn btn-secondary" onclick="reschedMeeting('${m.id}')">↺ Reagendar</button>
+    ${m.status!=='cancelled'?`<button class="btn btn-secondary" style="color:var(--danger);border-color:var(--danger)" onclick="cancelMeeting('${m.id}')">✕ Cancelar</button>`:''}
+    <button class="btn btn-secondary" onclick="closeModal('view-sched-modal')">Fechar</button>`;
+
+  document.getElementById('view-sched-modal').classList.add('open');
+}
+
+function reschedMeeting(meetingId) {
+  const m = (store.scheduledMeetings||[]).find(x=>x.id===meetingId);
+  if (!m) return;
+  closeModal('view-sched-modal');
+  schedState = {
+    step: 2,
+    leaderId: m.leaderId,
+    date: m.date,
+    timeStart: m.timeStart,
+    duration: m.duration,
+    meetingType: m.meetingType,
+    agenda: m.agenda,
+    message: m.message,
+    editingId: meetingId
+  };
+  // Mark old as rescheduled
+  m.status = 'rescheduled';
+  saveStore();
+  document.getElementById('sched-modal').classList.add('open');
+  renderSchedStep();
+}
+
+function cancelMeeting(meetingId) {
+  const m = (store.scheduledMeetings||[]).find(x=>x.id===meetingId);
+  if (!m) return;
+  m.status = 'cancelled';
+  m.cancelledAt = new Date().toISOString();
+  saveStore();
+  auditLog('meeting_cancelled', { meetingId, leaderId: m.leaderId });
+  closeModal('view-sched-modal');
+  if (document.getElementById('page-my1on1')?.classList.contains('active')) renderMy1on1();
+  showToast('Reunião cancelada e removida do calendário.', 'info');
 }
 
 // ============================================================
@@ -3437,13 +3879,14 @@ function renderMy1on1() {
   const tabsHtml = `<div class="tabs" id="my1on1-tabs">${tabs.map(t => `<div class="tab ${my1on1Tab===t.id?'active':''}" onclick="switchMy1on1Tab('${t.id}')">${t.label}</div>`).join('')}</div>`;
 
   // Teams banner
+  const scheduled = (store.scheduledMeetings||[]).filter(m=>m.status==='scheduled');
   const teamsBanner = `<div class="teams-connect-banner">
     <span style="font-size:24px">🔵</span>
     <div style="flex:1">
       <div class="fw-700 text-sm">Microsoft Teams / Outlook Calendar</div>
-      <div class="text-xs text-muted" style="margin-top:2px">Sincronize reuniões, links e transcrições. Integração via Microsoft Graph API — disponível na próxima versão.</div>
+      <div class="text-xs text-muted" style="margin-top:2px">${scheduled.length ? `${scheduled.length} reunião${scheduled.length>1?'ões':''} agendada${scheduled.length>1?'s':''}` : 'Agende 1:1s diretamente e envie convites pelo Teams'}</div>
     </div>
-    <button class="btn btn-secondary btn-sm" onclick="showToast('Integração Teams em desenvolvimento. Aguarde a próxima versão.','warning')" style="border-color:rgba(0,118,189,.4);color:var(--accent)">Conectar Teams</button>
+    <button class="btn btn-primary btn-sm" onclick="openSchedModal()" style="white-space:nowrap">+ Agendar 1:1</button>
   </div>`;
 
   el.innerHTML = kpisHtml + teamsBanner + tabsHtml + `<div id="my1on1-tab-body" style="margin-top:20px"></div>`;
@@ -3485,14 +3928,20 @@ function renderCalendar1on1(sessions, isAdmin, now) {
   const { year, month } = calMonth;
   const monthName = new Date(year, month, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
-  // Map sessions to dates
+  // Map sessions (done) to dates
   const evMap = {};
   sessions.forEach(s => {
     if (!s.dateISO) return;
     const key = s.dateISO.slice(0, 10);
     if (!evMap[key]) evMap[key] = [];
     const l = isAdmin ? store.leaders.find(x => x.id === s.leaderId) : null;
-    evMap[key].push({ session: s, leaderName: l ? l.name : currentUser.name, color: l ? l.color : '#0076BD' });
+    evMap[key].push({ type:'done', session: s, leaderName: l ? l.name : currentUser.name, color: l ? l.color : '#0076BD' });
+  });
+  // Map scheduled meetings to dates
+  (store.scheduledMeetings||[]).filter(m=>m.status==='scheduled').forEach(m => {
+    if (!m.date) return;
+    if (!evMap[m.date]) evMap[m.date] = [];
+    evMap[m.date].push({ type:'scheduled', meeting: m, leaderName: m.leaderName, color:'#0076BD' });
   });
 
   const firstDay = new Date(year, month, 1);
@@ -3515,6 +3964,9 @@ function renderCalendar1on1(sessions, isAdmin, now) {
     const dayEvs = evMap[dateStr] || [];
     const evHtml = dayEvs.slice(0,2).map(e => {
       const initials = e.leaderName.split(' ').map(x=>x[0]).join('').slice(0,2);
+      if (e.type === 'scheduled') {
+        return `<div class="cal-event ev-blue" onclick="viewScheduledMeeting('${e.meeting.id}')" title="${e.leaderName} — ${e.meeting.timeStart}">${initials} 📅</div>`;
+      }
       return `<div class="cal-event ev-green" onclick="viewSessionByDate('${dateStr}')" title="${e.leaderName}">${initials} 1:1</div>`;
     }).join('') + (dayEvs.length > 2 ? `<div class="cal-event ev-gray">+${dayEvs.length-2}</div>` : '');
     cells += `<div class="cal-cell${isToday?' today':''}${dayEvs.length?' has-event-mobile':''}">
@@ -3541,7 +3993,7 @@ function renderCalendar1on1(sessions, isAdmin, now) {
       </div>
       <div style="display:flex;align-items:center;gap:8px">
         <span class="text-xs text-muted">${sessions.length} reuniões</span>
-        <button class="btn btn-primary btn-sm" onclick="showPage('new1on1')">+ Novo 1:1</button>
+        <button class="btn btn-primary btn-sm" onclick="openSchedModal()">+ Novo 1:1</button>
       </div>
     </div>
     <div class="cal-header">
@@ -3605,26 +4057,66 @@ function renderProximos1on1(sessions, isAdmin, now) {
 
   const urgencyColor = (days) => days > 21 ? 'var(--danger)' : days > 14 ? 'var(--warning)' : 'var(--success)';
 
-  return `<div class="card">
-    <div class="card-title">⏰ Cadência por Líder</div>
+  // Scheduled meetings section
+  const scheduledUpcoming = (store.scheduledMeetings||[])
+    .filter(m => m.status === 'scheduled' && m.date >= nowStr)
+    .sort((a,b) => a.date.localeCompare(b.date) || a.timeStart.localeCompare(b.timeStart));
+
+  const scheduledHtml = scheduledUpcoming.length ? `
+    <div class="card" style="margin-bottom:16px;border-color:rgba(0,118,189,.25);background:rgba(0,118,189,.02)">
+      <div class="card-title" style="margin-bottom:12px">📅 Agendamentos — Próximas Reuniões</div>
+      ${scheduledUpcoming.map(m => {
+        const mt = MEETING_TYPES[m.meetingType] || MEETING_TYPES['1on1_regular'];
+        const l = store.leaders.find(x=>x.id===m.leaderId);
+        const dateF = new Date(m.date+'T12:00').toLocaleDateString('pt-BR', { weekday:'short', day:'numeric', month:'short' });
+        const avatarHtml = l?.photo
+          ? `<img src="${l.photo}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+          : `<div style="width:36px;height:36px;border-radius:50%;background:${l?.color||'#0076BD'};display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:13px;flex-shrink:0">${m.leaderName[0]}</div>`;
+        return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="viewScheduledMeeting('${m.id}')">
+          ${avatarHtml}
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:13px">${m.leaderName}</div>
+            <div style="font-size:12px;color:var(--text3)">${mt.icon} ${mt.label}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:12px;font-weight:700;color:var(--accent)">${dateF}</div>
+            <div style="font-size:11px;color:var(--text3)">${m.timeStart} · ${m.duration}min</div>
+          </div>
+          <span class="badge badge-blue" style="flex-shrink:0">Agendado</span>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  return scheduledHtml + `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div class="card-title" style="margin:0">⏰ Cadência por Líder</div>
+      <button class="btn btn-primary btn-sm" onclick="openSchedModal()">+ Agendar</button>
+    </div>
     ${!items.length ? '<p class="text-sm text-muted">Nenhum líder cadastrado.</p>' : items.map(item => {
       const l = item.leader;
+      const scheduled = (store.scheduledMeetings||[]).find(m => m.leaderId===l.id && m.status==='scheduled' && m.date>=nowStr);
       const avatarHtml = l.photo
         ? `<img src="${l.photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0">`
         : `<div style="width:40px;height:40px;border-radius:50%;background:${l.color||'#6366f1'};display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:15px;flex-shrink:0">${l.name[0]}</div>`;
       const riskBadge = { green:'badge-green', yellow:'badge-yellow', orange:'badge-red', red:'badge-red' }[item.risk.level] || 'badge-gray';
-      return `<div class="upcoming-item" onclick="startNew1on1FromAdmin('${l.id}');showPage('new1on1')">
-        ${avatarHtml}
-        <div style="flex:1;min-width:0">
-          <div class="upcoming-leader-name">${l.name}</div>
-          <div class="upcoming-meta">${l.area}${l.title ? ' · ' + l.title : ''}</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
-            <span style="font-size:12px;font-weight:600;color:${urgencyColor(item.daysSince)}">◷ ${item.daysSince < 999 ? item.daysSince + ' dias sem 1:1' : 'Nunca realizado'}</span>
-            ${item.pending ? `<span class="badge badge-yellow">${item.pending} pendência${item.pending>1?'s':''}</span>` : ''}
-            <span class="badge ${riskBadge}">${item.risk.label}</span>
+      return `<div class="upcoming-item">
+        <div onclick="startNew1on1FromAdmin('${l.id}');showPage('new1on1')" style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;cursor:pointer">
+          ${avatarHtml}
+          <div style="flex:1;min-width:0">
+            <div class="upcoming-leader-name">${l.name}</div>
+            <div class="upcoming-meta">${l.area}${l.title ? ' · ' + l.title : ''}</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+              <span style="font-size:12px;font-weight:600;color:${urgencyColor(item.daysSince)}">◷ ${item.daysSince < 999 ? item.daysSince + ' dias sem 1:1' : 'Nunca realizado'}</span>
+              ${item.pending ? `<span class="badge badge-yellow">${item.pending} pendência${item.pending>1?'s':''}</span>` : ''}
+              <span class="badge ${riskBadge}">${item.risk.label}</span>
+              ${scheduled ? `<span class="badge badge-blue">📅 ${new Date(scheduled.date+'T12:00').toLocaleDateString('pt-BR',{day:'numeric',month:'short'})} ${scheduled.timeStart}</span>` : ''}
+            </div>
           </div>
         </div>
-        <button class="btn btn-primary btn-sm" style="flex-shrink:0">▶ Iniciar</button>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();openSchedModal('${l.id}')" title="Agendar 1:1">📅</button>
+          <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();startNew1on1FromAdmin('${l.id}');showPage('new1on1')">▶ Iniciar</button>
+        </div>
       </div>`;
     }).join('')}
   </div>`;
