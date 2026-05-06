@@ -188,7 +188,19 @@
   /* LEADER CARD */
   .leader-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; cursor: pointer; transition: box-shadow .2s, transform .2s, border-color .2s; box-shadow: var(--shadow-sm); }
   .leader-card:hover { border-color: var(--accent); box-shadow: var(--shadow-md); transform: translateY(-2px); }
-  .leader-card-header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+  .leader-card-header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; position: relative; }
+  .leader-chat-btn { position:absolute; top:0; right:0; width:32px; height:32px; border-radius:50%; border:none; background:var(--surface2); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:15px; transition:all .15s; flex-shrink:0; position:relative; }
+  .leader-chat-btn:hover { background:rgba(0,118,189,.12); transform:scale(1.1); }
+  .leader-chat-btn.has-unread { background:rgba(239,68,68,.1); }
+  .leader-chat-badge { position:absolute; top:-4px; right:-4px; background:#ef4444; color:#fff; border-radius:10px; padding:0 5px; font-size:10px; font-weight:700; min-width:16px; height:16px; display:flex; align-items:center; justify-content:center; }
+  /* Chat drawer */
+  #leader-chat-drawer { position:fixed; right:0; top:0; height:100vh; width:380px; max-width:95vw; background:var(--surface); border-left:1px solid var(--border); box-shadow:var(--shadow-lg); z-index:500; display:flex; flex-direction:column; transform:translateX(100%); transition:transform .25s cubic-bezier(.4,0,.2,1); }
+  #leader-chat-drawer.open { transform:translateX(0); }
+  .chat-drawer-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; flex-shrink:0; }
+  .chat-drawer-log { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:10px; background:var(--surface2); }
+  .chat-drawer-input { padding:12px 16px; border-top:1px solid var(--border); display:flex; gap:8px; align-items:flex-end; flex-shrink:0; background:var(--surface); }
+  .chat-drawer-overlay { position:fixed; inset:0; background:rgba(0,0,0,.25); z-index:499; display:none; }
+  .chat-drawer-overlay.open { display:block; }
   .leader-avatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; flex-shrink: 0; color:#fff; }
   .leader-name { font-size: 16px; font-weight: 700; color: var(--text); }
   .leader-area { font-size: 12px; color: var(--text3); font-weight: 500; }
@@ -725,11 +737,6 @@
       <div class="nav-item" onclick="showPage('leaders')" id="nav-leaders" style="display:none">
         <span class="icon">◈</span> Líderes
       </div>
-      <!-- ADMIN 6º: Chat com Líderes -->
-      <div class="nav-item" onclick="showPage('chat')" id="nav-chat-admin" style="display:none">
-        <span class="icon">💬</span> Chat com Líderes
-        <span id="chat-admin-badge" style="margin-left:auto;background:#0076BD;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700;display:none">0</span>
-      </div>
 
       <!-- LÍDER 1º: Meus 1:1 -->
       <div class="nav-item" onclick="showPage('my1on1')" id="nav-my1on1" style="display:none">
@@ -937,6 +944,24 @@
 
 <!-- TOAST CONTAINER -->
 <div id="toast-container"></div>
+
+<!-- LEADER CHAT DRAWER -->
+<div class="chat-drawer-overlay" id="chat-drawer-overlay" onclick="closeLeaderChat()"></div>
+<div id="leader-chat-drawer">
+  <div class="chat-drawer-header">
+    <div id="chat-drawer-avatar" style="width:40px;height:40px;border-radius:50%;background:#0076BD;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;flex-shrink:0">?</div>
+    <div style="flex:1;min-width:0">
+      <div id="chat-drawer-name" class="fw-700 text-sm">–</div>
+      <div id="chat-drawer-area" class="text-xs text-muted">–</div>
+    </div>
+    <button onclick="closeLeaderChat()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3);padding:4px">✕</button>
+  </div>
+  <div class="chat-drawer-log" id="chat-drawer-log"></div>
+  <div class="chat-drawer-input">
+    <textarea id="chat-drawer-input" rows="2" class="form-input" style="flex:1;min-height:52px;resize:none;font-size:14px" placeholder="Mensagem..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendDrawerMessage()}"></textarea>
+    <button class="btn-compact" onclick="sendDrawerMessage()" style="height:52px;padding:0 16px">Enviar</button>
+  </div>
+</div>
 
 <!-- CEO UPLOAD MODAL -->
 <div class="modal-overlay" id="ceo-upload-modal">
@@ -1680,18 +1705,18 @@ function startApp() {
   document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
 
   if (currentUser.isAdmin) {
-    // Admin: Gerar 1:1 → Alertas → Histórico → Dashboard → Líderes → Chat com Líderes | CEO Digital | Admin
-    ['nav-new1on1','nav-alerts','nav-history-admin','nav-leaders','nav-chat-admin',
+    // Admin: Gerar 1:1 → Alertas → Histórico → Dashboard → Líderes | CEO Digital | Admin
+    ['nav-new1on1','nav-alerts','nav-history-admin','nav-leaders',
      'nav-reports','nav-admin','nav-sec-admin',
      'nav-ceo','nav-sec-ceo','nav-crisis','nav-timeline','nav-notifications'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = '';
     });
-    ['nav-my1on1','nav-profile','nav-sec-profile','nav-history','nav-chat'].forEach(id => {
+    ['nav-my1on1','nav-profile','nav-sec-profile','nav-history','nav-chat','nav-chat-admin'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
     renderAdminDashboard();
     updateAlertsBadge();
-    setTimeout(() => { checkAndGenerateNotifications(); updateNotifBadge(); updateChatAdminBadge(); }, 800);
+    setTimeout(() => { checkAndGenerateNotifications(); updateNotifBadge(); }, 800);
   } else {
     // Leader: Meus 1:1 → Alertas → Histórico → Dashboard → Meu Perfil → Chat
     ['nav-my1on1','nav-alerts','nav-history','nav-profile','nav-sec-profile','nav-chat'].forEach(id => {
@@ -1699,7 +1724,7 @@ function startApp() {
     });
     ['nav-leaders','nav-reports','nav-admin','nav-sec-admin',
      'nav-ceo','nav-sec-ceo','nav-crisis','nav-timeline','nav-notifications',
-     'nav-new1on1','nav-history-admin','nav-chat-admin'].forEach(id => {
+     'nav-new1on1','nav-history-admin'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
     const leaderData = store.leaders.find(l => l.id === currentUser.id);
@@ -2216,7 +2241,7 @@ function showPage(page) {
     reports: 'Relatórios', admin: 'Administração', ceo: 'CEO Digital',
     profile: 'Meu Perfil', crisis: '🔴 Crisis Board', timeline: 'Timelines de Líderes',
     notifications: '🔔 Notificações',
-    chat: currentUser?.isAdmin ? '💬 Chat com Líderes' : '💬 Chat'
+    chat: '💬 Chat'
   };
   document.getElementById('topbar-title').textContent = titles[page] || page;
 
@@ -2225,10 +2250,7 @@ function showPage(page) {
     const adminHistEl = document.getElementById('nav-history-admin');
     if (adminHistEl) adminHistEl.classList.add('active');
   }
-  if (page === 'chat' && currentUser?.isAdmin) {
-    const adminChatEl = document.getElementById('nav-chat-admin');
-    if (adminChatEl) adminChatEl.classList.add('active');
-  }
+
 
   if (page === 'dashboard') { if (currentUser.isAdmin) renderAdminDashboard(); else renderLeaderDashboard(); }
   if (page === 'crisis') renderCrisisBoard();
@@ -2810,14 +2832,24 @@ function renderLeaders() {
     const ls = store.sessions.filter(s => s.leaderId === l.id);
     const lp = store.actionItems.filter(a => a.leaderId === l.id && a.status === 'pending');
     const ld = store.actionItems.filter(a => a.leaderId === l.id && a.status === 'done');
+    const chatMsgs = getChatMessages().filter(m => !m.isAdmin && m.from === l.id && !m.read);
+    const chatUnread = chatMsgs.length;
+    const chatActive = getChatMessages().some(m => m.from === l.id || (m.isAdmin && m.toLeaderId === l.id));
+    const chatBtnClass = chatUnread > 0 ? 'leader-chat-btn has-unread' : 'leader-chat-btn';
+    const chatIcon = chatUnread > 0 ? '💬' : chatActive ? '💬' : '💬';
+    const chatColor = chatUnread > 0 ? '#ef4444' : chatActive ? 'var(--accent)' : 'var(--text3)';
     return `<div class="leader-card" onclick="openLeaderDetail('${l.id}')">
       <div class="leader-card-header">
         <div class="leader-avatar" style="background:${l.color}">${l.name[0]}</div>
-        <div>
+        <div style="flex:1;min-width:0">
           <div class="leader-name">${l.name}</div>
           <div class="leader-area">${l.area}</div>
           ${l.anamneseDone ? '<span class="badge badge-green" style="margin-top:4px;font-size:11px">Anamnese OK</span>' : '<span class="badge badge-yellow" style="margin-top:4px;font-size:11px">Sem anamnese</span>'}
         </div>
+        <button class="${chatBtnClass}" onclick="event.stopPropagation();openLeaderChat('${l.id}')" title="Chat com ${l.name}" style="color:${chatColor}">
+          ${chatIcon}
+          ${chatUnread > 0 ? `<span class="leader-chat-badge">${chatUnread}</span>` : ''}
+        </button>
       </div>
       <div class="leader-stats">
         <div class="leader-stat">
@@ -6899,10 +6931,102 @@ function updateChatAdminBadge() {
   const badge = document.getElementById('chat-admin-badge');
   if (!badge) return;
   const msgs = getChatMessages();
-  // Admin: conta mensagens de líderes não lidas
   const unread = msgs.filter(m => !m.isAdmin && !m.read).length;
   badge.textContent = unread;
   badge.style.display = unread > 0 ? '' : 'none';
+}
+
+let drawerLeaderId = null;
+
+function openLeaderChat(leaderId) {
+  drawerLeaderId = leaderId;
+  const l = store.leaders.find(x => x.id === leaderId);
+  if (!l) return;
+
+  // Header
+  const avatarEl = document.getElementById('chat-drawer-avatar');
+  avatarEl.style.background = l.color || '#0076BD';
+  avatarEl.textContent = l.name[0];
+  document.getElementById('chat-drawer-name').textContent = l.name;
+  document.getElementById('chat-drawer-area').textContent = l.area || '';
+
+  // Mark leader's messages as read
+  const msgs = getChatMessages();
+  msgs.forEach(m => { if (m.from === leaderId && !m.isAdmin) m.read = true; });
+  saveChatMessages(msgs);
+
+  renderDrawerLog();
+
+  document.getElementById('leader-chat-drawer').classList.add('open');
+  document.getElementById('chat-drawer-overlay').classList.add('open');
+  setTimeout(() => {
+    const log = document.getElementById('chat-drawer-log');
+    if (log) log.scrollTop = log.scrollHeight;
+    document.getElementById('chat-drawer-input')?.focus();
+  }, 50);
+
+  // Refresh leader cards to update badge
+  if (document.getElementById('leaders-grid')) renderLeaders();
+}
+
+function closeLeaderChat() {
+  drawerLeaderId = null;
+  document.getElementById('leader-chat-drawer').classList.remove('open');
+  document.getElementById('chat-drawer-overlay').classList.remove('open');
+}
+
+function renderDrawerLog() {
+  const log = document.getElementById('chat-drawer-log');
+  if (!log || !drawerLeaderId) return;
+  const msgs = getChatMessages().filter(m =>
+    m.from === drawerLeaderId || (m.isAdmin && m.toLeaderId === drawerLeaderId)
+  );
+  if (!msgs.length) {
+    log.innerHTML = `<div style="text-align:center;padding:32px 16px;color:var(--text3)">
+      <div style="font-size:28px;margin-bottom:8px">💬</div>
+      <div class="fw-600 text-sm">Nenhuma mensagem</div>
+      <div class="text-xs" style="margin-top:4px">Inicie a conversa</div>
+    </div>`;
+    return;
+  }
+  log.innerHTML = msgs.map(m => {
+    const isMine = m.isAdmin;
+    const time = new Date(m.ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const date = new Date(m.ts).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    return `<div style="display:flex;flex-direction:column;align-items:${isMine?'flex-end':'flex-start'}">
+      <div style="max-width:80%;background:${isMine?'var(--accent)':'var(--surface)'};color:${isMine?'#fff':'var(--text)'};padding:9px 13px;border-radius:${isMine?'14px 14px 3px 14px':'14px 14px 14px 3px'};font-size:13px;line-height:1.5;border:${isMine?'none':'1px solid var(--border)'}">
+        ${escapeHtml(m.text)}
+      </div>
+      <div class="text-xs text-muted" style="margin-top:2px">${date} ${time}</div>
+    </div>`;
+  }).join('');
+}
+
+function sendDrawerMessage() {
+  if (!drawerLeaderId) return;
+  const input = document.getElementById('chat-drawer-input');
+  const text = input?.value.trim();
+  if (!text) return;
+  const msgs = getChatMessages();
+  msgs.push({
+    id: 'c-' + Date.now(),
+    from: currentUser.id,
+    fromName: currentUser.name,
+    isAdmin: true,
+    toLeaderId: drawerLeaderId,
+    text,
+    ts: new Date().toISOString(),
+    read: true,
+    priority: 'normal'
+  });
+  saveChatMessages(msgs);
+  input.value = '';
+  renderDrawerLog();
+  setTimeout(() => {
+    const log = document.getElementById('chat-drawer-log');
+    if (log) log.scrollTop = log.scrollHeight;
+  }, 30);
+  auditLog('chat_message_sent', { toLeaderId: drawerLeaderId });
 }
 
 function renderChatPage() {
