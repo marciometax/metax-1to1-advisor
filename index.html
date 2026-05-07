@@ -436,6 +436,16 @@
     .teams-connect-banner { flex-direction: column; gap: 10px; text-align: center; }
     /* Admin card: reduce gap */
     #admin-leaders-grid .card > div:first-child { flex-wrap: wrap; gap: 12px; }
+    /* 1:1 Session form — mobile-first vertical layout */
+    .new1on1-layout { grid-template-columns: 1fr !important; }
+    .new1on1-sidebar { width: 100% !important; margin-bottom: 0 !important; }
+    .new1on1-steps-list { display: none !important; }
+    .new1on1-progress-bar { display: flex !important; }
+    .session-toolbar { flex-wrap: wrap; gap: 6px; }
+    .session-toolbar > div:first-child { width: 100%; justify-content: center; margin-bottom: 2px; }
+    /* Nav buttons: full-width on mobile */
+    .session-nav-btns { flex-direction: row !important; }
+    .session-nav-btns .btn { flex: 1; justify-content: center; }
   }
 
   @media (max-width: 600px) {
@@ -746,15 +756,20 @@
       <div class="nav-item" onclick="showPage('history')" id="nav-history" style="display:none">
         <span class="icon">◷</span> Histórico
       </div>
-      <!-- LÍDER 5º: Meu Perfil -->
+      <!-- LÍDER 4º: Notificações (cobranças do sistema/CEO) -->
+      <div class="nav-item" onclick="showPage('notifications')" id="nav-notifications-leader" style="display:none">
+        <span class="icon">🔔</span> Notificações
+        <span id="notif-leader-badge" style="margin-left:auto;background:#ef4444;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700;display:none">0</span>
+      </div>
+      <!-- LÍDER: Perfil section -->
       <div class="nav-section" id="nav-sec-profile" style="display:none">Perfil</div>
       <div class="nav-item" onclick="showPage('profile')" id="nav-profile" style="display:none">
         <span class="icon">👤</span> Meu Perfil
       </div>
-      <!-- LÍDER 6º: Chat direto com Márcio -->
+      <!-- LÍDER: Chat direto com Márcio -->
       <div class="nav-item" onclick="showPage('chat')" id="nav-chat" style="display:none">
         <span class="icon">💬</span> Chat
-        <span id="chat-badge" style="margin-left:auto;background:#0076BD;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700;display:none">0</span>
+        <span id="chat-badge" style="margin-left:auto;background:#ef4444;color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700;display:none">0</span>
       </div>
 
       <!-- ===================== CEO DIGITAL ===================== -->
@@ -1718,8 +1733,9 @@ function startApp() {
     updateAlertsBadge();
     setTimeout(() => { checkAndGenerateNotifications(); updateNotifBadge(); }, 800);
   } else {
-    // Leader: Meus 1:1 → Alertas → Histórico → Dashboard → Meu Perfil → Chat
-    ['nav-my1on1','nav-alerts','nav-history','nav-profile','nav-sec-profile','nav-chat'].forEach(id => {
+    // Leader: Meus 1:1 → Alertas → Histórico → Notificações → Dashboard → Meu Perfil → Chat
+    ['nav-my1on1','nav-alerts','nav-history','nav-notifications-leader',
+     'nav-profile','nav-sec-profile','nav-chat'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = '';
     });
     ['nav-leaders','nav-reports','nav-admin','nav-sec-admin',
@@ -1734,6 +1750,7 @@ function startApp() {
       renderLeaderDashboard();
     }
     updateAlertsBadge();
+    setTimeout(() => { updateNotifBadge(); updateChatBadge(); }, 500);
   }
 
   renderHistory();
@@ -2222,8 +2239,8 @@ function exportUserData() {
 // NAVIGATION
 // ============================================================
 function showPage(page) {
-  // Block leader access to admin-only pages
-  if (!currentUser?.isAdmin && ['notifications','reports','admin','leaders','ceo','crisis','timeline','new1on1'].includes(page)) {
+  // Block leader access to admin-only pages (notifications IS allowed for leaders now)
+  if (!currentUser?.isAdmin && ['reports','admin','leaders','ceo','crisis','timeline','new1on1'].includes(page)) {
     showPage('my1on1');
     return;
   }
@@ -2240,17 +2257,18 @@ function showPage(page) {
     new1on1: 'Gerar nova 1:1', history: 'Histórico', alerts: 'Alertas',
     reports: 'Relatórios', admin: 'Administração', ceo: 'CEO Digital',
     profile: 'Meu Perfil', crisis: '🔴 Crisis Board', timeline: 'Timelines de Líderes',
-    notifications: '🔔 Notificações',
+    notifications: currentUser?.isAdmin ? '🔔 Notificações' : '🔔 Minhas Notificações',
     chat: '💬 Chat'
   };
   document.getElementById('topbar-title').textContent = titles[page] || page;
 
-  // Marcar nav-item correto para admin/chat e admin/history
+  // Alias nav items
   if (page === 'history' && currentUser?.isAdmin) {
-    const adminHistEl = document.getElementById('nav-history-admin');
-    if (adminHistEl) adminHistEl.classList.add('active');
+    const el = document.getElementById('nav-history-admin'); if (el) el.classList.add('active');
   }
-
+  if (page === 'notifications' && !currentUser?.isAdmin) {
+    const el = document.getElementById('nav-notifications-leader'); if (el) el.classList.add('active');
+  }
 
   if (page === 'dashboard') { if (currentUser.isAdmin) renderAdminDashboard(); else renderLeaderDashboard(); }
   if (page === 'crisis') renderCrisisBoard();
@@ -2267,8 +2285,8 @@ function showPage(page) {
   if (page === 'history') renderHistory();
   if (page === 'ceo') renderCeoPage();
   if (page === 'profile') renderProfilePage();
-  if (page === 'notifications') renderNotificationsPage();
-  if (page === 'chat') { renderChatPage(); markChatRead(); if (currentUser.isAdmin) updateChatAdminBadge(); else updateChatBadge(); }
+  if (page === 'notifications') { renderNotificationsPage(); updateNotifBadge(); }
+  if (page === 'chat') { renderChatPage(); markChatRead(); updateChatBadge(); }
 }
 
 function markAlertsRead() {
@@ -3135,65 +3153,61 @@ function renderNew1on1() {
 
   const step = SESSION_STEPS[sessionState.step];
 
-  // Step progress
+  // Step progress — list (desktop) + compact progress bar (mobile)
   const stepsHtml = SESSION_STEPS.map((s, i) => `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;opacity:${i <= sessionState.step ? 1 : 0.4}">
+    <div class="new1on1-steps-list" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;opacity:${i <= sessionState.step ? 1 : 0.4}">
       <div style="width:24px;height:24px;border-radius:50%;background:${i < sessionState.step ? '#22c55e' : i === sessionState.step ? '#6366f1' : 'var(--surface2)'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">
         ${i < sessionState.step ? '✓' : s.num}
       </div>
       <div class="text-sm ${i === sessionState.step ? 'fw-600' : 'text-muted'}">${s.title}</div>
     </div>`).join('');
+  const progressPct = Math.round(((sessionState.step) / (SESSION_STEPS.length - 1)) * 100);
+  const progressBarHtml = `<div class="new1on1-progress-bar" style="display:none;flex-direction:column;gap:4px;margin-bottom:4px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span class="text-xs text-muted">Etapa ${sessionState.step + 1} de ${SESSION_STEPS.length}</span>
+      <span class="text-xs fw-600" style="color:var(--accent)">${SESSION_STEPS[sessionState.step].title}</span>
+    </div>
+    <div style="height:4px;background:var(--surface3);border-radius:4px;overflow:hidden">
+      <div style="height:100%;width:${progressPct}%;background:var(--grad1);border-radius:4px;transition:width .3s"></div>
+    </div>
+  </div>`;
 
   // Init session state recording if needed
   if (!sessionState.rec) sessionState.rec = { active: false, paused: false, transcript: '', markers: [], sessionSecs: 0 };
 
   el.innerHTML = `
-    <div style="display:grid;grid-template-columns:240px 1fr;gap:24px">
-      <div class="card" style="height:fit-content">
-        <div class="flex items-center gap-8 mb-16">
-          <div class="user-avatar" style="background:${leader.color};width:36px;height:36px;font-size:14px">${leader.name[0]}</div>
-          <div>
-            <div class="fw-600">${leader.name}</div>
+    <div class="new1on1-layout" style="display:grid;grid-template-columns:240px 1fr;gap:24px">
+      <!-- Sidebar: líder + etapas (desktop) + progress bar (mobile) -->
+      <div class="card new1on1-sidebar" style="height:fit-content">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <div class="user-avatar" style="background:${leader.color};width:40px;height:40px;font-size:15px;flex-shrink:0">${leader.name[0]}</div>
+          <div style="min-width:0">
+            <div class="fw-700 text-sm" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${leader.name}</div>
             <div class="text-xs text-muted">${leader.area}</div>
           </div>
         </div>
+        ${progressBarHtml}
         ${stepsHtml}
       </div>
+      <!-- Main: toolbar + step content -->
       <div>
         <!-- Session Toolbar -->
         <div class="session-toolbar" id="session-toolbar">
-          <!-- Timer -->
           <div style="display:flex;align-items:center;gap:6px">
             <span style="font-size:12px;color:var(--text3)">⏱</span>
             <span class="session-timer" id="session-toolbar-timer">00:00</span>
           </div>
-          <div style="width:1px;height:24px;background:var(--border);flex-shrink:0"></div>
-          <!-- Rec controls -->
-          <button class="btn btn-secondary btn-sm" id="btn-rec-start" onclick="sessionRecStart()" title="Gravar reunião">
-            🔴 Gravar
-          </button>
-          <button class="btn btn-secondary btn-sm" id="btn-rec-pause" onclick="sessionRecPause()" style="display:none" title="Pausar gravação">
-            ⏸ Pausar
-          </button>
-          <button class="btn btn-secondary btn-sm" id="btn-rec-resume" onclick="sessionRecResume()" style="display:none" title="Retomar gravação">
-            ▶ Retomar
-          </button>
-          <button class="btn btn-danger btn-sm" id="btn-rec-stop" onclick="sessionRecStop()" style="display:none" title="Encerrar gravação">
-            ⏹ Encerrar
-          </button>
+          <div style="width:1px;height:24px;background:var(--border);flex-shrink:0" class="toolbar-sep"></div>
+          <button class="btn btn-secondary btn-sm" id="btn-rec-start" onclick="sessionRecStart()" title="Gravar reunião">🔴 Gravar</button>
+          <button class="btn btn-secondary btn-sm" id="btn-rec-pause" onclick="sessionRecPause()" style="display:none" title="Pausar">⏸ Pausar</button>
+          <button class="btn btn-secondary btn-sm" id="btn-rec-resume" onclick="sessionRecResume()" style="display:none" title="Retomar">▶ Retomar</button>
+          <button class="btn btn-danger btn-sm" id="btn-rec-stop" onclick="sessionRecStop()" style="display:none" title="Encerrar">⏹ Encerrar</button>
           <span class="rec-indicator" id="rec-indicator" style="display:none"><span class="rec-dot"></span> REC</span>
-          <!-- Marker -->
-          <button class="btn btn-secondary btn-sm" id="btn-marker" onclick="sessionAddMarker()" style="display:none" title="Marcar ponto crítico">
-            📌 Marcar
-          </button>
+          <button class="btn btn-secondary btn-sm" id="btn-marker" onclick="sessionAddMarker()" style="display:none" title="Marcar ponto">📌 Marcar</button>
           <div style="flex:1"></div>
-          <!-- Refine transcript -->
-          <button class="btn btn-secondary btn-sm" onclick="openSessionTranscript()" id="btn-transcript" title="Ver / Refinar transcrição">
-            📝 Transcrição
-          </button>
+          <button class="btn btn-secondary btn-sm" onclick="openSessionTranscript()" id="btn-transcript" title="Transcrição">📝 Transcrição</button>
         </div>
-        <!-- Recording active indicator strip -->
-        <div id="rec-transcript-strip" style="display:none;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--text2);max-height:80px;overflow-y:auto;line-height:1.5" id="rec-live-text"></div>
+        <div id="rec-transcript-strip" style="display:none;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--text2);max-height:80px;overflow-y:auto;line-height:1.5"></div>
 
         <div class="step-header">
           <div class="step-number">${step.num}</div>
@@ -3203,7 +3217,7 @@ function renderNew1on1() {
           </div>
         </div>
         <div id="step-content">${renderStepContent(step.id, leader)}</div>
-        <div style="display:flex;gap:12px;margin-top:24px">
+        <div class="session-nav-btns" style="display:flex;gap:12px;margin-top:24px">
           ${sessionState.step > 0 ? `<button class="btn btn-secondary" onclick="sessionBack()">← Voltar</button>` : ''}
           <button class="btn btn-primary" onclick="sessionNext()">
             ${sessionState.step === SESSION_STEPS.length - 1 ? 'Finalizar 1:1 ✓' : 'Continuar →'}
@@ -6574,13 +6588,15 @@ function clearNotifications() {
 }
 
 function updateNotifBadge() {
-  // Badge only shows for admins (leaders don't see the notifications menu)
-  if (!currentUser?.isAdmin) { const b = document.getElementById('notif-badge'); if (b) b.style.display='none'; return; }
   const unread = getNotifications().filter(n => !n.read).length;
-  const badge = document.getElementById('notif-badge');
-  if (!badge) return;
-  if (unread > 0) { badge.textContent = unread; badge.style.display = ''; }
-  else { badge.style.display = 'none'; }
+  if (currentUser?.isAdmin) {
+    const badge = document.getElementById('notif-badge');
+    if (badge) { badge.textContent = unread; badge.style.display = unread > 0 ? '' : 'none'; }
+  } else {
+    // Líder: atualiza badge no nav-notifications-leader
+    const badge = document.getElementById('notif-leader-badge');
+    if (badge) { badge.textContent = unread; badge.style.display = unread > 0 ? '' : 'none'; }
+  }
 }
 
 function checkAndGenerateNotifications() {
@@ -6705,12 +6721,16 @@ function renderNotificationsPage() {
   const critical = list.filter(n => { const d = NOTIF_TYPES[n.type]; return d && d.priority === 'critical'; }).length;
   const today = list.filter(n => new Date(n.ts).toDateString() === new Date().toDateString()).length;
 
+  const isAdmin = currentUser?.isAdmin;
+
   el.innerHTML = `
     <div class="tabs mb-0" id="notif-tabs" style="margin-bottom:0;overflow-x:auto;flex-wrap:nowrap">
-      <div class="tab active" onclick="switchNotifTab('feed')" style="white-space:nowrap">Central de Notificações</div>
+      <div class="tab active" onclick="switchNotifTab('feed')" style="white-space:nowrap">${isAdmin ? 'Central de Notificações' : 'Minhas Notificações'}</div>
+      ${isAdmin ? `
       <div class="tab" onclick="switchNotifTab('enviar')" style="white-space:nowrap">✉ Enviar Notificação</div>
       <div class="tab" onclick="switchNotifTab('config')" style="white-space:nowrap">Configurações</div>
       <div class="tab" onclick="switchNotifTab('email')" style="white-space:nowrap">📧 E-mail Workflow</div>
+      ` : ''}
     </div>
 
     <div id="notif-tab-feed" style="margin-top:20px">
@@ -6724,9 +6744,9 @@ function renderNotificationsPage() {
 
       <!-- Actions -->
       <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-        <button class="btn btn-secondary btn-sm" onclick="checkAndGenerateNotifications();renderNotificationsPage()">↺ Verificar agora</button>
+        ${isAdmin ? `<button class="btn btn-secondary btn-sm" onclick="checkAndGenerateNotifications();renderNotificationsPage()">↺ Verificar agora</button>` : ''}
         ${unreadCount > 0 ? `<button class="btn btn-secondary btn-sm" onclick="markAllNotifsRead()">✓ Marcar todas como lidas</button>` : ''}
-        ${list.length > 0 ? `<button class="btn btn-secondary btn-sm" style="border-color:var(--danger);color:var(--danger)" onclick="clearNotifications()">🗑 Limpar todas</button>` : ''}
+        ${list.length > 0 ? `<button class="btn btn-secondary btn-sm" style="border-color:var(--danger);color:var(--danger)" onclick="clearNotifications()">🗑 Limpar</button>` : ''}
       </div>
 
       <!-- Feed -->
