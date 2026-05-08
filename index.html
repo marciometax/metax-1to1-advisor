@@ -1425,9 +1425,9 @@
 // ============================================================
 // VERSÃO E CHANGELOG
 // ============================================================
-const APP_VERSION = '2.1.0';
-const APP_VERSION_DATE = '2026-05-05';
-const APP_BUILD = '2026.05.05-2200';
+const APP_VERSION = '2.2.0';
+const APP_VERSION_DATE = '2026-05-08';
+const APP_BUILD = '2026.05.08-1510';
 const APP_ENV = 'production';
 
 const CHANGELOG = [
@@ -1577,7 +1577,15 @@ function initStore() {
   };
 }
 
-function saveStore() { localStorage.setItem(STORE_KEY, JSON.stringify(store)); }
+function saveStore() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(store));
+  // Dispara evento manual para a MESMA aba detectar mudanças (storage event só dispara em outras abas)
+  try { window.dispatchEvent(new StorageEvent('storage', { key: STORE_KEY, newValue: localStorage.getItem(STORE_KEY) })); } catch(e) {}
+}
+
+function refreshStore() {
+  store = loadStore();
+}
 
 let store = loadStore();
 let currentUser = null;
@@ -1754,6 +1762,56 @@ function startApp() {
   }
 
   renderHistory();
+
+  // ── SINCRONIZAÇÃO MULTI-JANELA ──────────────────────────────
+  let _syncBusy = false;
+  // 1) storage event: outra aba/janela (ou saveStore manual) salvou — recarrega
+  window.addEventListener('storage', (e) => {
+    if (e.key !== STORE_KEY || _syncBusy) return;
+    _syncBusy = true;
+    store = loadStore();
+    syncRefreshCurrentPage();
+    setTimeout(() => { _syncBusy = false; }, 500);
+  });
+
+  // 2) focus: ao voltar para esta janela, recarrega o store
+  window.addEventListener('focus', () => {
+    const fresh = loadStore();
+    // Só re-renderiza se algo mudou (comparação rápida por tamanho de JSON)
+    if (JSON.stringify(fresh) !== JSON.stringify(store)) {
+      store = fresh;
+      syncRefreshCurrentPage();
+    }
+  });
+
+  // 3) polling para admin: verifica a cada 15s se há dados novos
+  if (currentUser?.isAdmin) {
+    setInterval(() => {
+      const fresh = loadStore();
+      if (JSON.stringify(fresh) !== JSON.stringify(store)) {
+        store = fresh;
+        syncRefreshCurrentPage();
+        showToast('Dados atualizados automaticamente.', 'info', 2500);
+      }
+    }, 15000);
+  }
+}
+
+function syncRefreshCurrentPage() {
+  // Re-renderiza a página ativa sem resetar navegação
+  const active = document.querySelector('.page.active');
+  if (!active) return;
+  const page = active.id.replace('page-', '');
+  if (page === 'dashboard') { if (currentUser.isAdmin) renderAdminDashboard(); else renderLeaderDashboard(); }
+  else if (page === 'leaders') renderLeaders();
+  else if (page === 'history') renderHistory();
+  else if (page === 'alerts') { renderAlerts(); updateAlertsBadge(); }
+  else if (page === 'reports') renderReports();
+  else if (page === 'my1on1') renderMy1on1();
+  else if (page === 'notifications') renderNotificationsPage();
+  updateAlertsBadge();
+  updateNotifBadge();
+  if (!currentUser?.isAdmin) updateChatBadge();
 }
 
 function updateAlertsBadge() {
