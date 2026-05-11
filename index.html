@@ -1468,9 +1468,9 @@
 // ============================================================
 // VERSÃO E CHANGELOG
 // ============================================================
-const APP_VERSION = '2.3.2';
+const APP_VERSION = '2.3.3';
 const APP_VERSION_DATE = '2026-05-11';
-const APP_BUILD = '2026.05.11-0005';
+const APP_BUILD = '2026.05.11-1520';
 const APP_ENV = 'production';
 
 const CHANGELOG = [
@@ -1579,12 +1579,21 @@ async function sbLoadStore() {
   } catch(e) { return null; }
 }
 
-// Salva store no Supabase (upsert)
+// Salva store no Supabase com merge seguro (read-merge-write para evitar race condition)
 async function sbSaveStore(storeData) {
   try {
     const sb = getSB();
     if (!sb) return false;
-    const { error } = await sb.from('kv_store').upsert({ key: SB_STORE_ID, value: storeData, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    // Lê versão atual do Supabase antes de salvar
+    const { data: existing } = await sb.from('kv_store').select('value').eq('key', SB_STORE_ID).single();
+    // Merge: une o que está no Supabase com o que temos localmente
+    const toSave = existing?.value ? mergeStores(existing.value, storeData) : storeData;
+    const { error } = await sb.from('kv_store').upsert({ key: SB_STORE_ID, value: toSave, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    if (!error) {
+      // Atualiza store local com o merged para manter consistência
+      store = migrateStore(toSave);
+      localStorage.setItem(STORE_KEY, JSON.stringify(store));
+    }
     return !error;
   } catch(e) { return false; }
 }
