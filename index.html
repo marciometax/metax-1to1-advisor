@@ -1468,9 +1468,9 @@
 // ============================================================
 // VERSÃO E CHANGELOG
 // ============================================================
-const APP_VERSION = '2.3.0';
+const APP_VERSION = '2.3.1';
 const APP_VERSION_DATE = '2026-05-10';
-const APP_BUILD = '2026.05.10-2200';
+const APP_BUILD = '2026.05.10-2215';
 const APP_ENV = 'production';
 
 const CHANGELOG = [
@@ -1728,6 +1728,20 @@ function migrateStore(s) {
     photoHistory: [], photoUpdatedAt: null, photoUpdatedBy: null,
     ...l
   }));
+  // Injeta líderes do initStore que não existem no store atual (ex: novos cadastros via atualização)
+  const defaultLeaders = [
+    { id: 'eduarda', name: 'Eduarda Folador', area: 'Comercial', email: 'eduarda.folador@metax.ind.br', pass: 'Trocar@123', color: '#ec4899', anamneseDone: false, profile: null, mustChangePw: true },
+    { id: 'andrea', name: 'Andrea Moreira', area: 'Comunicação', email: 'andrea.moreira@metax.ind.br', pass: 'Trocar@123', color: '#06b6d4', anamneseDone: false, profile: null, mustChangePw: true },
+    { id: 'claudia', name: 'Cláudia Folador', area: 'Governança', email: 'claudia.folador@metax.ind.br', pass: 'Trocar@123', color: '#10b981', anamneseDone: false, profile: null, mustChangePw: true },
+    { id: 'fabio', name: 'Fábio Geremias', area: 'Conselho/Financeiro', email: 'fabio.geremias@metax.ind.br', pass: 'Trocar@123', color: '#f59e0b', anamneseDone: false, profile: null, mustChangePw: true },
+    { id: 'vanderson', name: 'Vanderson Souza', area: 'Tecnologia', email: 'vanderson.souza@metax.ind.br', pass: 'Trocar@123', color: '#8b5cf6', anamneseDone: false, profile: null, mustChangePw: true },
+    { id: 'francisco', name: 'Francisco Silva', area: 'Operações', email: 'francisco.silva@metax.ind.br', pass: 'Trocar@123', color: '#ef4444', anamneseDone: false, profile: null, mustChangePw: true },
+    { id: 'marlon', name: 'Marlon Tadeu', area: 'Comercial', email: 'marlon.tadeu@metax.ind.br', pass: 'Trocar@123', color: '#22c55e', anamneseDone: false, profile: null, mustChangePw: true },
+    { id: 'marcio-lider', name: 'Márcio (Teste Líder)', area: 'CEO', email: 'goico10@gmail.com', pass: 'Goico100!', color: '#0ea5e9', anamneseDone: false, profile: null, mustChangePw: false },
+  ];
+  defaultLeaders.forEach(dl => {
+    if (!s.leaders.find(l => l.id === dl.id)) s.leaders.push(dl);
+  });
   // Marca versão do store
   localStorage.setItem(STORE_VERSION_KEY, APP_VERSION);
   return s;
@@ -1746,6 +1760,7 @@ function initStore() {
       { id: 'vanderson', name: 'Vanderson Souza', area: 'Tecnologia', email: 'vanderson.souza@metax.ind.br', pass: 'Trocar@123', color: '#8b5cf6', anamneseDone: false, profile: null, mustChangePw: true },
       { id: 'francisco', name: 'Francisco Silva', area: 'Operações', email: 'francisco.silva@metax.ind.br', pass: 'Trocar@123', color: '#ef4444', anamneseDone: false, profile: null, mustChangePw: true },
       { id: 'marlon', name: 'Marlon Tadeu', area: 'Comercial', email: 'marlon.tadeu@metax.ind.br', pass: 'Trocar@123', color: '#22c55e', anamneseDone: false, profile: null, mustChangePw: true },
+      { id: 'marcio-lider', name: 'Márcio (Teste Líder)', area: 'CEO', email: 'goico10@gmail.com', pass: 'Goico100!', color: '#0ea5e9', anamneseDone: false, profile: null, mustChangePw: false },
     ],
     sessions: [],
     alerts: [],

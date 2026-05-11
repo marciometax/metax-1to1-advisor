@@ -1,8 +1,8 @@
 {
   "app": "MTX Advisor",
-  "version": "2.3.0",
-  "build": "2026.05.10-2200",
+  "version": "2.3.1",
+  "build": "2026.05.10-2215",
   "environment": "production",
-  "deployedAt": "2026-05-10T22:00:00-03:00",
+  "deployedAt": "2026-05-10T22:15:00-03:00",
   "changelog": "https://mtxadvisor.netlify.app/"
 }
