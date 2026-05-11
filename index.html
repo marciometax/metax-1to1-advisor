@@ -1468,9 +1468,9 @@
 // ============================================================
 // VERSÃO E CHANGELOG
 // ============================================================
-const APP_VERSION = '2.3.3';
+const APP_VERSION = '2.3.4';
 const APP_VERSION_DATE = '2026-05-11';
-const APP_BUILD = '2026.05.11-1520';
+const APP_BUILD = '2026.05.11-1640';
 const APP_ENV = 'production';
 
 const CHANGELOG = [
@@ -4208,6 +4208,8 @@ function finishSession() {
   generateAlerts(session, leader);
 
   saveStore();
+  // Sobe imediatamente para o Supabase (sem debounce) ao finalizar sessão
+  sbSaveStore(store).then(ok => updateSbStatus(ok));
 
   // Show summary
   showSessionSummary(session, leader);
