@@ -1468,9 +1468,9 @@
 // ============================================================
 // VERSÃO E CHANGELOG
 // ============================================================
-const APP_VERSION = '2.3.1';
-const APP_VERSION_DATE = '2026-05-10';
-const APP_BUILD = '2026.05.10-2215';
+const APP_VERSION = '2.3.2';
+const APP_VERSION_DATE = '2026-05-11';
+const APP_BUILD = '2026.05.11-0005';
 const APP_ENV = 'production';
 
 const CHANGELOG = [
@@ -3396,12 +3396,11 @@ function startNew1on1(leaderId) {
 
 function renderNew1on1InTab() {
   // Renderiza o questionário de 1:1 dentro da aba "Meus 1:1", sem trocar de página
+  // Marca que estamos no modo "in-tab" para que sessionNext/renderNew1on1 saibam onde renderizar
+  sessionState._inTab = true;
   const body = document.getElementById('my1on1-tab-body');
   if (!body) return;
   const tmp = document.getElementById('new1on1-content');
-  // Usa o mesmo renderNew1on1 apontando para o container da tab
-  const origContent = tmp;
-  // Swap: redireciona renderNew1on1 para o body da tab temporariamente
   const originalId = 'new1on1-content';
   body.id = originalId;
   if (tmp) tmp.id = 'new1on1-content-hidden';
@@ -3570,6 +3569,22 @@ function renderAgendamentosHub() {
 }
 
 function renderNew1on1() {
+  // Se o líder está no modo in-tab, renderiza dentro da aba "Meus 1:1"
+  if (sessionState._inTab) {
+    const body = document.getElementById('my1on1-tab-body');
+    const tmp = document.getElementById('new1on1-content');
+    const originalId = 'new1on1-content';
+    if (body) body.id = originalId;
+    if (tmp) tmp.id = 'new1on1-content-hidden';
+    _renderNew1on1Core();
+    if (body) body.id = 'my1on1-tab-body';
+    if (tmp) tmp.id = originalId;
+    return;
+  }
+  _renderNew1on1Core();
+}
+
+function _renderNew1on1Core() {
   const el = document.getElementById('new1on1-content');
 
   // Determine leader
