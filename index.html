@@ -1468,9 +1468,9 @@
 // ============================================================
 // VERSÃO E CHANGELOG
 // ============================================================
-const APP_VERSION = '2.3.5';
+const APP_VERSION = '2.3.6';
 const APP_VERSION_DATE = '2026-05-11';
-const APP_BUILD = '2026.05.11-1700';
+const APP_BUILD = '2026.05.11-1705';
 const APP_ENV = 'production';
 
 const CHANGELOG = [
@@ -1838,16 +1838,7 @@ async function doLogin() {
   const loginBtn = document.getElementById('login-btn');
   err.style.display = 'none';
 
-  // Verificação rápida com store local primeiro (offline-capable)
-  const adminLocal = store.users.find(u => u.email.toLowerCase() === user && u.pass === pass);
-  const leaderLocal = store.leaders.find(l => l.email.toLowerCase() === user && l.pass === pass);
-  if (!adminLocal && !leaderLocal) {
-    auditLog('login_failed', { email: user });
-    err.style.display = 'block';
-    return;
-  }
-
-  // Sync do Supabase antes de iniciar (mostra loading no botão)
+  // Sempre sincroniza com Supabase antes de validar (garante senha atualizada mesmo sem localStorage)
   if (loginBtn) { loginBtn.disabled = true; loginBtn.textContent = 'Sincronizando...'; }
   try {
     const remote = await sbLoadStore();
