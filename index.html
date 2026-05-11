@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>1:1 Advisor — Meta.X</title>
 <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js" crossorigin="anonymous" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
 <style>
   :root {
     /* Paleta MTX Advisor — Light Premium */
@@ -671,7 +672,7 @@
       <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
     </div>
     <div class="error-msg" id="login-error">Usuário ou senha incorretos.</div>
-    <button class="btn btn-primary mt-16" onclick="doLogin()">Entrar na plataforma</button>
+    <button id="login-btn" class="btn btn-primary mt-16" onclick="doLogin()">Entrar na plataforma</button>
     <div style="text-align:center;margin-top:20px" class="text-xs text-muted">Plataforma restrita — Meta.X Inovação e Serviços Inteligentes</div>
   </div>
 </div>
@@ -805,6 +806,10 @@
       </div>
       <div id="import-backup-btn-wrap" style="display:none;margin-bottom:6px">
         <button class="btn btn-secondary btn-sm" style="width:100%;font-size:11px;border-color:var(--accent);color:var(--accent)" onclick="openImportModal()" title="Importar backup de líder">⬆ Importar Backup</button>
+      </div>
+      <div id="supabase-sync-wrap" style="display:none;margin-bottom:6px">
+        <button class="btn btn-secondary btn-sm" id="sb-sync-btn" style="width:100%;font-size:11px;border-color:#22c55e;color:#22c55e" onclick="manualSbSync()" title="Sincronizar com banco central agora">☁ Sincronizar Agora</button>
+        <div id="sb-status" style="font-size:10px;color:var(--text-muted);margin-top:3px;text-align:center">🟢 Supabase conectado</div>
       </div>
       <div id="version-health" style="font-size:10px;color:var(--text-muted);margin-bottom:8px;display:flex;align-items:center;gap:6px">
         <span id="version-health-dot" style="width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0"></span>
@@ -1463,9 +1468,9 @@
 // ============================================================
 // VERSÃO E CHANGELOG
 // ============================================================
-const APP_VERSION = '2.2.1';
+const APP_VERSION = '2.3.0';
 const APP_VERSION_DATE = '2026-05-10';
-const APP_BUILD = '2026.05.10-2145';
+const APP_BUILD = '2026.05.10-2200';
 const APP_ENV = 'production';
 
 const CHANGELOG = [
@@ -1549,6 +1554,146 @@ function auditLog(action, details = {}) {
 }
 
 // ============================================================
+// SUPABASE — Banco Central (substitui localStorage cross-device)
+// ============================================================
+const SB_URL = 'https://ejnzrlgqjszkrgrpugzn.supabase.co';
+const SB_KEY = 'sb_publishable_70x9lQ3ARNa8WgUdBggcsQ_gKEUSCiw';
+const SB_STORE_ID = 'main'; // ID único do registro central no Supabase
+
+let _sb = null;
+function getSB() {
+  if (!_sb && window.supabase) {
+    _sb = window.supabase.createClient(SB_URL, SB_KEY);
+  }
+  return _sb;
+}
+
+// Carrega store do Supabase (tabela kv_store, chave 'main')
+async function sbLoadStore() {
+  try {
+    const sb = getSB();
+    if (!sb) return null;
+    const { data, error } = await sb.from('kv_store').select('value').eq('key', SB_STORE_ID).single();
+    if (error || !data) return null;
+    return data.value;
+  } catch(e) { return null; }
+}
+
+// Salva store no Supabase (upsert)
+async function sbSaveStore(storeData) {
+  try {
+    const sb = getSB();
+    if (!sb) return false;
+    const { error } = await sb.from('kv_store').upsert({ key: SB_STORE_ID, value: storeData, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    return !error;
+  } catch(e) { return false; }
+}
+
+// Sincroniza do Supabase para localStorage + memória
+async function syncFromSupabase(showMsg) {
+  const remote = await sbLoadStore();
+  if (!remote) return false;
+  const merged = mergeStores(store, remote);
+  store = merged;
+  localStorage.setItem(STORE_KEY, JSON.stringify(store));
+  if (showMsg) showToast('✅ Sincronizado com Supabase', 'success', 2500);
+  return true;
+}
+
+// Merge inteligente: mantém o mais recente por campo
+function mergeStores(local, remote) {
+  if (!remote) return local;
+  if (!local) return migrateStore(remote);
+  const merged = { ...local };
+  // Arrays: merge por id, sem duplicar
+  ['sessions','alerts','actionItems','scheduledMeetings'].forEach(key => {
+    const remArr = remote[key] || [];
+    const locArr = local[key] || [];
+    const byId = {};
+    locArr.forEach(i => { if(i.id) byId[i.id] = i; });
+    remArr.forEach(i => {
+      if (!i.id) return;
+      if (!byId[i.id]) byId[i.id] = i;
+      else {
+        // Prefere o mais recente por updatedAt/createdAt
+        const locTs = byId[i.id].updatedAt || byId[i.id].createdAt || 0;
+        const remTs = i.updatedAt || i.createdAt || 0;
+        if (remTs > locTs) byId[i.id] = i;
+      }
+    });
+    merged[key] = Object.values(byId);
+  });
+  // Leaders: merge campo a campo, preserva anamnese preenchida
+  const remLeaders = remote.leaders || [];
+  const locLeaders = local.leaders || [];
+  merged.leaders = locLeaders.map(ll => {
+    const rl = remLeaders.find(r => r.id === ll.id);
+    if (!rl) return ll;
+    // Se remote tem anamnese e local não, usa remote
+    if (rl.anamneseDone && !ll.anamneseDone) return { ...ll, ...rl };
+    return ll;
+  });
+  // Adiciona líderes que só existem no remote
+  remLeaders.forEach(rl => {
+    if (!merged.leaders.find(l => l.id === rl.id)) merged.leaders.push(rl);
+  });
+  // CEO items
+  if (remote.ceo) {
+    ['items','prompts','teaches','refinements'].forEach(k => {
+      const remArr = remote.ceo[k] || [];
+      const locArr = (local.ceo && local.ceo[k]) || [];
+      const byId = {};
+      locArr.forEach(i => { if(i.id) byId[i.id] = i; });
+      remArr.forEach(i => { if(i.id && !byId[i.id]) byId[i.id] = i; });
+      merged.ceo[k] = Object.values(byId);
+    });
+  }
+  // Notificações e chat (sem tools de estrutura unificada ainda)
+  if (!merged.notifications) merged.notifications = remote.notifications || [];
+  if (!merged.chatMessages) merged.chatMessages = remote.chatMessages || [];
+  return migrateStore(merged);
+}
+
+let _sbSaveTimer = null;
+// Salva no Supabase com debounce de 2s (evita flood de writes)
+function sbSaveDebounced() {
+  if (_sbSaveTimer) clearTimeout(_sbSaveTimer);
+  _sbSaveTimer = setTimeout(async () => {
+    const ok = await sbSaveStore(store);
+    updateSbStatus(ok);
+  }, 2000);
+}
+
+function updateSbStatus(connected) {
+  const el = document.getElementById('sb-status');
+  if (!el) return;
+  el.textContent = connected ? '🟢 Supabase conectado' : '🔴 Offline — dados salvos localmente';
+  el.style.color = connected ? '#22c55e' : '#ef4444';
+}
+
+async function manualSbSync() {
+  const btn = document.getElementById('sb-sync-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Sincronizando...'; }
+  try {
+    // Push local → Supabase
+    const pushed = await sbSaveStore(store);
+    // Pull Supabase → local (merge)
+    const remote = await sbLoadStore();
+    if (remote) {
+      store = mergeStores(store, remote);
+      localStorage.setItem(STORE_KEY, JSON.stringify(store));
+      syncRefreshCurrentPage();
+    }
+    updateSbStatus(pushed);
+    showToast(pushed ? '✅ Sincronização completa com Supabase' : '⚠️ Erro ao conectar com Supabase', pushed ? 'success' : 'warning', 3000);
+  } catch(e) {
+    updateSbStatus(false);
+    showToast('⚠️ Erro na sincronização: ' + e.message, 'warning', 3000);
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '☁ Sincronizar Agora'; }
+}
+
+// ============================================================
 // DATA STORE
 // ============================================================
 const STORE_KEY = 'metax_1to1_v3';
@@ -1619,6 +1764,8 @@ function saveStore() {
   localStorage.setItem(STORE_KEY, JSON.stringify(store));
   // Dispara evento manual para a MESMA aba detectar mudanças (storage event só dispara em outras abas)
   try { window.dispatchEvent(new StorageEvent('storage', { key: STORE_KEY, newValue: localStorage.getItem(STORE_KEY) })); } catch(e) {}
+  // Persiste no Supabase em background (debounced 2s)
+  sbSaveDebounced();
 }
 
 function refreshStore() {
@@ -1649,11 +1796,32 @@ let schedState = {
 // ============================================================
 let _forcePwUser = null;
 
-function doLogin() {
+async function doLogin() {
   const user = document.getElementById('login-user').value.trim().toLowerCase();
   const pass = document.getElementById('login-pass').value;
   const err = document.getElementById('login-error');
+  const loginBtn = document.getElementById('login-btn');
   err.style.display = 'none';
+
+  // Verificação rápida com store local primeiro (offline-capable)
+  const adminLocal = store.users.find(u => u.email.toLowerCase() === user && u.pass === pass);
+  const leaderLocal = store.leaders.find(l => l.email.toLowerCase() === user && l.pass === pass);
+  if (!adminLocal && !leaderLocal) {
+    auditLog('login_failed', { email: user });
+    err.style.display = 'block';
+    return;
+  }
+
+  // Sync do Supabase antes de iniciar (mostra loading no botão)
+  if (loginBtn) { loginBtn.disabled = true; loginBtn.textContent = 'Sincronizando...'; }
+  try {
+    const remote = await sbLoadStore();
+    if (remote) {
+      store = mergeStores(store, remote);
+      localStorage.setItem(STORE_KEY, JSON.stringify(store));
+    }
+  } catch(e) { /* fallback para local */ }
+  if (loginBtn) { loginBtn.disabled = false; loginBtn.textContent = 'Entrar'; }
 
   const admin = store.users.find(u => u.email.toLowerCase() === user && u.pass === pass);
   if (admin) {
@@ -1778,6 +1946,10 @@ function startApp() {
     // Mostrar botão de importar backup só para admin
     const importBtn = document.getElementById('import-backup-btn-wrap');
     if (importBtn) importBtn.style.display = '';
+    const syncWrap = document.getElementById('supabase-sync-wrap');
+    if (syncWrap) syncWrap.style.display = '';
+    // Testa conectividade Supabase
+    sbLoadStore().then(r => updateSbStatus(!!r));
     renderAdminDashboard();
     updateAlertsBadge();
     setTimeout(() => { checkAndGenerateNotifications(); updateNotifBadge(); }, 800);
@@ -1825,16 +1997,29 @@ function startApp() {
     }
   });
 
-  // 3) polling para admin: verifica a cada 15s se há dados novos
+  // 3) polling local: verifica a cada 15s se há dados novos (multi-aba)
+  setInterval(() => {
+    const fresh = loadStore();
+    if (JSON.stringify(fresh) !== JSON.stringify(store)) {
+      store = fresh;
+      syncRefreshCurrentPage();
+    }
+  }, 15000);
+
+  // 4) polling Supabase: admin sincroniza com banco central a cada 30s
   if (currentUser?.isAdmin) {
-    setInterval(() => {
-      const fresh = loadStore();
-      if (JSON.stringify(fresh) !== JSON.stringify(store)) {
-        store = fresh;
+    setInterval(async () => {
+      const remote = await sbLoadStore();
+      if (!remote) return;
+      const merged = mergeStores(store, remote);
+      const changed = JSON.stringify(merged) !== JSON.stringify(store);
+      if (changed) {
+        store = merged;
+        localStorage.setItem(STORE_KEY, JSON.stringify(store));
         syncRefreshCurrentPage();
-        showToast('Dados atualizados automaticamente.', 'info', 2500);
+        showToast('✅ Dados sincronizados com Supabase', 'success', 2500);
       }
-    }, 15000);
+    }, 30000);
   }
 }
 
