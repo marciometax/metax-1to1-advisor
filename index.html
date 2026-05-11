@@ -803,6 +803,9 @@
         <button class="btn btn-secondary btn-sm" style="flex:1;font-size:11px" onclick="openChangelog()">✦ v<span id="sidebar-version"></span></button>
         <button class="btn btn-secondary btn-sm" style="flex:1;font-size:11px" onclick="exportUserData()" title="Backup dos seus dados">⬇ Backup</button>
       </div>
+      <div id="import-backup-btn-wrap" style="display:none;margin-bottom:6px">
+        <button class="btn btn-secondary btn-sm" style="width:100%;font-size:11px;border-color:var(--accent);color:var(--accent)" onclick="openImportModal()" title="Importar backup de líder">⬆ Importar Backup</button>
+      </div>
       <div id="version-health" style="font-size:10px;color:var(--text-muted);margin-bottom:8px;display:flex;align-items:center;gap:6px">
         <span id="version-health-dot" style="width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0"></span>
         <span id="version-health-label">Build <span id="sidebar-build"></span> · Prod</span>
@@ -975,6 +978,41 @@
   <div class="chat-drawer-input">
     <textarea id="chat-drawer-input" rows="2" class="form-input" style="flex:1;min-height:52px;resize:none;font-size:14px" placeholder="Mensagem..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendDrawerMessage()}"></textarea>
     <button class="btn-compact" onclick="sendDrawerMessage()" style="height:52px;padding:0 16px">Enviar</button>
+  </div>
+</div>
+
+<!-- IMPORT BACKUP MODAL -->
+<div class="modal-overlay" id="import-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div class="modal-title">⬆ Importar Backup de Líder</div>
+      <button class="modal-close" onclick="closeModal('import-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert-card alert-info" style="margin-bottom:16px">
+        <div class="alert-body">
+          <strong>Como funciona:</strong> o líder exporta o backup no dispositivo dele (botão ⬇ Backup na barra lateral) e te envia o arquivo <code>.json</code>. Você importa aqui — os dados são <strong>mesclados</strong> sem sobrescrever o que já existe no painel.
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Arquivo de backup (.json)</label>
+        <input type="file" id="import-file-input" accept=".json" class="form-input" onchange="previewImport(this)">
+      </div>
+      <div id="import-preview" style="display:none;margin-top:16px">
+        <div class="card" style="background:var(--surface2);padding:16px">
+          <div class="fw-700 text-sm" style="margin-bottom:10px">📋 Resumo do backup</div>
+          <div id="import-preview-body"></div>
+        </div>
+        <div class="alert-card alert-warning" style="margin-top:12px">
+          <div class="alert-body" id="import-merge-summary"></div>
+        </div>
+      </div>
+      <div id="import-error" style="display:none;color:var(--danger);font-size:13px;margin-top:10px"></div>
+    </div>
+    <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="closeModal('import-modal')">Cancelar</button>
+      <button class="btn btn-primary" id="import-confirm-btn" style="display:none" onclick="confirmImport()">⬆ Importar e Mesclar</button>
+    </div>
   </div>
 </div>
 
@@ -1425,9 +1463,9 @@
 // ============================================================
 // VERSÃO E CHANGELOG
 // ============================================================
-const APP_VERSION = '2.2.0';
-const APP_VERSION_DATE = '2026-05-08';
-const APP_BUILD = '2026.05.08-1510';
+const APP_VERSION = '2.2.1';
+const APP_VERSION_DATE = '2026-05-10';
+const APP_BUILD = '2026.05.10-2145';
 const APP_ENV = 'production';
 
 const CHANGELOG = [
@@ -1737,6 +1775,9 @@ function startApp() {
     ['nav-my1on1','nav-profile','nav-sec-profile','nav-history','nav-chat','nav-chat-admin'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
+    // Mostrar botão de importar backup só para admin
+    const importBtn = document.getElementById('import-backup-btn-wrap');
+    if (importBtn) importBtn.style.display = '';
     renderAdminDashboard();
     updateAlertsBadge();
     setTimeout(() => { checkAndGenerateNotifications(); updateNotifBadge(); }, 800);
@@ -2291,6 +2332,143 @@ function exportUserData() {
   auditLog('data_exported', { date });
   addNotification('data_exported', 'Backup realizado com sucesso', `Export de dados gerado em ${date} por ${currentUser?.email || 'admin'}.`, { date });
   showToast('Backup gerado com sucesso!', 'success');
+}
+
+// ============================================================
+// IMPORTAÇÃO DE BACKUP — MERGE INTELIGENTE
+// ============================================================
+let _importData = null;
+
+function openImportModal() {
+  if (!currentUser?.isAdmin) return;
+  _importData = null;
+  document.getElementById('import-file-input').value = '';
+  document.getElementById('import-preview').style.display = 'none';
+  document.getElementById('import-error').style.display = 'none';
+  document.getElementById('import-confirm-btn').style.display = 'none';
+  document.getElementById('import-modal').classList.add('open');
+}
+
+function previewImport(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const errorEl = document.getElementById('import-error');
+  const previewEl = document.getElementById('import-preview');
+  const confirmBtn = document.getElementById('import-confirm-btn');
+  errorEl.style.display = 'none';
+  previewEl.style.display = 'none';
+  confirmBtn.style.display = 'none';
+  _importData = null;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.store || !data.exportedAt) throw new Error('Arquivo inválido — não é um backup MTX Advisor.');
+
+      _importData = data;
+      const s = data.store;
+
+      // Calcular o que será adicionado vs já existe
+      const newSessions = (s.sessions || []).filter(ns => !store.sessions.find(es => es.id === ns.id));
+      const newActions = (s.actionItems || []).filter(na => !store.actionItems.find(ea => ea.id === na.id));
+      const updatedLeaders = (s.leaders || []).filter(nl => {
+        const el = store.leaders.find(l => l.id === nl.id);
+        return el && (nl.anamneseDone && !el.anamneseDone);
+      });
+      const newAlerts = (s.alerts || []).filter(na => !store.alerts.find(ea => ea.id === na.id));
+
+      document.getElementById('import-preview-body').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><span class="text-xs text-muted">Exportado por</span><div class="fw-600 text-sm">${data.exportedBy || '—'}</div></div>
+          <div><span class="text-xs text-muted">Data do backup</span><div class="fw-600 text-sm">${new Date(data.exportedAt).toLocaleString('pt-BR')}</div></div>
+          <div><span class="text-xs text-muted">Versão</span><div class="fw-600 text-sm">v${data.appVersion || '—'}</div></div>
+          <div><span class="text-xs text-muted">Sessões no backup</span><div class="fw-600 text-sm">${(s.sessions||[]).length}</div></div>
+        </div>`;
+
+      document.getElementById('import-merge-summary').innerHTML =
+        `<strong>O que será importado:</strong><br>
+        ✅ ${newSessions.length} sessão(ões) de 1:1 novas<br>
+        ✅ ${newActions.length} plano(s) de ação novo(s)<br>
+        ✅ ${updatedLeaders.length} líder(es) com anamnese a atualizar<br>
+        ✅ ${newAlerts.length} alerta(s) novo(s)<br>
+        <span style="color:var(--text3);font-size:12px">Dados já existentes não serão sobrescritos.</span>`;
+
+      previewEl.style.display = '';
+      confirmBtn.style.display = '';
+    } catch(err) {
+      errorEl.textContent = '❌ ' + err.message;
+      errorEl.style.display = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function confirmImport() {
+  if (!_importData || !currentUser?.isAdmin) return;
+  const s = _importData.store;
+  let merged = { sessions: 0, actions: 0, leaders: 0, alerts: 0 };
+
+  // Mesclar sessões (por id)
+  (s.sessions || []).forEach(ns => {
+    if (!store.sessions.find(es => es.id === ns.id)) {
+      store.sessions.push(ns);
+      merged.sessions++;
+    }
+  });
+
+  // Mesclar planos de ação (por id)
+  (s.actionItems || []).forEach(na => {
+    if (!store.actionItems.find(ea => ea.id === na.id)) {
+      store.actionItems.push(na);
+      merged.actions++;
+    }
+  });
+
+  // Atualizar líderes: anamnese + profile (apenas se o backup tem e o local não tem)
+  (s.leaders || []).forEach(nl => {
+    const el = store.leaders.find(l => l.id === nl.id);
+    if (el) {
+      if (nl.anamneseDone && !el.anamneseDone) {
+        el.anamneseDone = true;
+        el.profile = nl.profile;
+        el.anamneseAnswers = nl.anamneseAnswers;
+        el.anamneseProgress = nl.anamneseProgress;
+        merged.leaders++;
+      }
+      // Atualizar foto se backup tem e local não tem
+      if (nl.photo && !el.photo) { el.photo = nl.photo; el.photoHistory = nl.photoHistory || []; }
+      // Atualizar campos de perfil editados
+      ['whatsapp','title','notes','color'].forEach(f => { if (nl[f] && !el[f]) el[f] = nl[f]; });
+    }
+  });
+
+  // Mesclar alertas (por id)
+  (s.alerts || []).forEach(na => {
+    if (!store.alerts.find(ea => ea.id === na.id)) {
+      store.alerts.push(na);
+      merged.alerts++;
+    }
+  });
+
+  // Mesclar scheduled meetings
+  (s.scheduledMeetings || []).forEach(nm => {
+    if (!(store.scheduledMeetings||[]).find(em => em.id === nm.id)) {
+      if (!store.scheduledMeetings) store.scheduledMeetings = [];
+      store.scheduledMeetings.push(nm);
+    }
+  });
+
+  saveStore();
+  closeModal('import-modal');
+  auditLog('backup_imported', { from: _importData.exportedBy, sessions: merged.sessions, actions: merged.actions });
+  showToast(`Importado: ${merged.sessions} sessão(ões), ${merged.actions} plano(s), ${merged.leaders} líder(es) atualizado(s).`, 'success', 6000);
+
+  // Refresh imediato
+  syncRefreshCurrentPage();
+  updateAlertsBadge();
+  updateNotifBadge();
+  _importData = null;
 }
 
 // ============================================================
