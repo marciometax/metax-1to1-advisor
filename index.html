@@ -1468,9 +1468,9 @@
 // ============================================================
 // VERSÃO E CHANGELOG
 // ============================================================
-const APP_VERSION = '2.3.7';
-const APP_VERSION_DATE = '2026-05-11';
-const APP_BUILD = '2026.05.11-1715';
+const APP_VERSION = '2.3.8';
+const APP_VERSION_DATE = '2026-05-12';
+const APP_BUILD = '2026.05.12-0930';
 const APP_ENV = 'production';
 
 const CHANGELOG = [
@@ -1991,6 +1991,8 @@ function startApp() {
      'nav-new1on1','nav-history-admin'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
+    // Sobe dados locais para Supabase ao entrar (garante que anamnese e sessões não se percam)
+    sbSaveStore(store).then(ok => updateSbStatus(ok));
     const leaderData = store.leaders.find(l => l.id === currentUser.id);
     if (leaderData && !leaderData.anamneseDone) {
       setTimeout(() => startAnamnese(currentUser.id), 500);
@@ -3182,6 +3184,7 @@ function finishAnamnese() {
   leader.anamneseAnswers = a;
   leader.anamneseProgress = null; // clear draft
   saveStore();
+  sbSaveStore(store).then(ok => updateSbStatus(ok));
   auditLog('anamnese_completed', { leaderId: leader.id, leaderName: leader.name });
 
   document.getElementById('anamnese-modal').classList.remove('open');
