@@ -1468,9 +1468,9 @@
 // ============================================================
 // VERSÃO E CHANGELOG
 // ============================================================
-const APP_VERSION = '2.4.0';
+const APP_VERSION = '2.4.1';
 const APP_VERSION_DATE = '2026-05-12';
-const APP_BUILD = '2026.05.12-0945';
+const APP_BUILD = '2026.05.12-0950';
 const APP_ENV = 'production';
 
 const CHANGELOG = [
@@ -1809,6 +1809,20 @@ function refreshStore() {
 
 let store = loadStore();
 let currentUser = null;
+
+// Restaura sessão ao recarregar página (executado após DOM pronto)
+function tryRestoreSession() {
+  try {
+    const saved = sessionStorage.getItem('mtx_session') || localStorage.getItem('mtx_session_persist');
+    if (!saved) return false;
+    const u = JSON.parse(saved);
+    const valid = u.isAdmin
+      ? store.users.find(x => x.id === u.id && x.pass === u.pass)
+      : store.leaders.find(x => x.id === u.id && x.pass === u.pass);
+    if (valid) { currentUser = u; return true; }
+  } catch(e) {}
+  return false;
+}
 let currentLeader = null; // when marcio selects a leader
 let anamneseState = { step: 0, answers: {}, leaderId: null };
 let sessionState = { step: 0, leaderId: null, data: {} };
@@ -1915,6 +1929,8 @@ function toggleSidebar() {
 function doLogout() {
   stopAnamneseTimer();
   currentUser = null;
+  sessionStorage.removeItem('mtx_session');
+  localStorage.removeItem('mtx_session_persist');
   document.getElementById('app').style.display = 'none';
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('login-user').value = '';
@@ -1922,6 +1938,12 @@ function doLogout() {
 }
 
 function startApp() {
+  // Persiste sessão para sobreviver a reload
+  if (currentUser) {
+    const sessionData = JSON.stringify(currentUser);
+    try { sessionStorage.setItem('mtx_session', sessionData); } catch(e) {}
+    try { localStorage.setItem('mtx_session_persist', sessionData); } catch(e) {}
+  }
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('force-pw-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
@@ -8219,8 +8241,12 @@ function sendSelectedEmail() {
   sendEmailDirect(eventKey, leader);
 }
 
-// Init
-document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+// Init — tenta restaurar sessão antes de mostrar tela de login
+if (tryRestoreSession()) {
+  startApp();
+} else {
+  document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+}
 </script>
 </body>
 </html>

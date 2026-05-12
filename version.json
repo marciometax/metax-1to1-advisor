@@ -1,8 +1,8 @@
 {
   "app": "MTX Advisor",
-  "version": "2.4.0",
-  "build": "2026.05.12-0945",
+  "version": "2.4.1",
+  "build": "2026.05.12-0950",
   "environment": "production",
-  "deployedAt": "2026-05-12T09:45:00-03:00",
+  "deployedAt": "2026-05-12T09:50:00-03:00",
   "changelog": "https://metax-1to1-advisor.marcio-goicocheia.workers.dev/"
 }
