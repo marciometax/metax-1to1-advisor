@@ -1468,9 +1468,9 @@
 // ============================================================
 // VERSÃO E CHANGELOG
 // ============================================================
-const APP_VERSION = '2.4.1';
+const APP_VERSION = '2.4.2';
 const APP_VERSION_DATE = '2026-05-12';
-const APP_BUILD = '2026.05.12-0950';
+const APP_BUILD = '2026.05.12-1015';
 const APP_ENV = 'production';
 
 const CHANGELOG = [
@@ -1816,10 +1816,26 @@ function tryRestoreSession() {
     const saved = sessionStorage.getItem('mtx_session') || localStorage.getItem('mtx_session_persist');
     if (!saved) return false;
     const u = JSON.parse(saved);
-    const valid = u.isAdmin
+    // Valida contra store local primeiro
+    const validLocal = u.isAdmin
       ? store.users.find(x => x.id === u.id && x.pass === u.pass)
       : store.leaders.find(x => x.id === u.id && x.pass === u.pass);
-    if (valid) { currentUser = u; return true; }
+    if (validLocal) { currentUser = u; return true; }
+    // Se não bateu localmente, tenta sincronizar com Supabase e re-validar
+    // (localStorage pode ter sido apagado pelo Safari)
+    sbLoadStore().then(remote => {
+      if (!remote) return;
+      store = mergeStores(store, remote);
+      localStorage.setItem(STORE_KEY, JSON.stringify(store));
+      const validRemote = u.isAdmin
+        ? store.users.find(x => x.id === u.id && x.pass === u.pass)
+        : store.leaders.find(x => x.id === u.id && x.pass === u.pass);
+      if (validRemote) {
+        currentUser = u;
+        startApp();
+      }
+    });
+    return false; // Aguarda Supabase async acima
   } catch(e) {}
   return false;
 }
