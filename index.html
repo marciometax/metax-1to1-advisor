@@ -1468,9 +1468,9 @@
 // ============================================================
 // VERSÃO E CHANGELOG
 // ============================================================
-const APP_VERSION = '2.3.9';
+const APP_VERSION = '2.4.0';
 const APP_VERSION_DATE = '2026-05-12';
-const APP_BUILD = '2026.05.12-0935';
+const APP_BUILD = '2026.05.12-0945';
 const APP_ENV = 'production';
 
 const CHANGELOG = [
@@ -3203,21 +3203,21 @@ function generateLeaderProfile(leader, a) {
   if (!saboteurs.length) saboteurs.push('A mapear nas próximas reuniões');
 
   const strengths = [];
-  if (a.good_behavior) strengths.push(a.good_behavior.substring(0, 80));
-  if (a.what_moves) strengths.push('Motivado por: ' + a.what_moves.substring(0, 60));
+  if (a.good_behavior) strengths.push(a.good_behavior);
+  if (a.what_moves) strengths.push('Motivado por: ' + a.what_moves);
 
   const risks = [];
-  if (a.limiting_behavior) risks.push(a.limiting_behavior.substring(0, 80));
-  if (a.avoid_talking) risks.push('Evita conversas sobre: ' + a.avoid_talking.substring(0, 60));
+  if (a.limiting_behavior) risks.push(a.limiting_behavior);
+  if (a.avoid_talking) risks.push('Evita conversas sobre: ' + a.avoid_talking);
 
   const priorities = [];
-  if (a.bottlenecks) priorities.push('Resolver gargalos: ' + a.bottlenecks.substring(0, 70));
-  if (a.difficult_conversations) priorities.push('Ter conversas difíceis: ' + a.difficult_conversations.substring(0, 70));
-  if (a.challenge_areas) priorities.push('Desafio pessoal: ' + a.challenge_areas.substring(0, 70));
+  if (a.bottlenecks) priorities.push('Resolver gargalos: ' + a.bottlenecks);
+  if (a.difficult_conversations) priorities.push('Ter conversas difíceis: ' + a.difficult_conversations);
+  if (a.challenge_areas) priorities.push('Desafio pessoal: ' + a.challenge_areas);
 
   const recurringThemes = [];
-  if (a.recurring_problems) recurringThemes.push(a.recurring_problems.substring(0, 100));
-  if (a.team_dependency) recurringThemes.push(a.team_dependency.substring(0, 100));
+  if (a.recurring_problems) recurringThemes.push(a.recurring_problems);
+  if (a.team_dependency) recurringThemes.push(a.team_dependency);
 
   return {
     style: inferLeaderStyle(a),
@@ -3248,6 +3248,21 @@ function showProfileSummary(profile, leader) {
   const modal = document.getElementById('session-modal');
   document.getElementById('session-modal-title').textContent = 'Perfil Inicial — ' + leader.name;
   document.getElementById('session-modal-sub').textContent = 'Gerado a partir da anamnese de liderança';
+  // Usa respostas originais completas se disponíveis, senão usa profile (pode ter texto truncado)
+  const a = leader.anamneseAnswers || {};
+  const strengths = [];
+  if (a.good_behavior) strengths.push(a.good_behavior);
+  if (a.what_moves) strengths.push('Motivado por: ' + a.what_moves);
+  const displayStrengths = strengths.length ? strengths : (profile.strengths || []);
+  const risks = [];
+  if (a.limiting_behavior) risks.push(a.limiting_behavior);
+  if (a.avoid_talking) risks.push('Evita conversas sobre: ' + a.avoid_talking);
+  const displayRisks = risks.length ? risks : (profile.risks || []);
+  const priorities = [];
+  if (a.bottlenecks) priorities.push('Resolver gargalos: ' + a.bottlenecks);
+  if (a.difficult_conversations) priorities.push('Ter conversas difíceis: ' + a.difficult_conversations);
+  if (a.challenge_areas) priorities.push('Desafio pessoal: ' + a.challenge_areas);
+  const displayPriorities = priorities.length ? priorities : (profile.priorities || []);
   document.getElementById('session-modal-body').innerHTML = `
     <div class="advisor-bubble">
       <div class="from">Advisor Digital — Meta.X</div>
@@ -3266,17 +3281,24 @@ function showProfileSummary(profile, leader) {
     <div class="grid-2 mb-16">
       <div>
         <div class="fw-600 mb-8 text-sm">✦ Pontos Fortes</div>
-        <ul style="padding-left:16px">${profile.strengths.map(s=>`<li class="text-sm text-muted mb-8">${s}</li>`).join('')}</ul>
+        <ul style="padding-left:16px">${displayStrengths.map(s=>`<li class="text-sm text-muted mb-8">${s}</li>`).join('')}</ul>
       </div>
       <div>
         <div class="fw-600 mb-8 text-sm">⚑ Riscos Comportamentais</div>
-        <ul style="padding-left:16px">${profile.risks.map(r=>`<li class="text-sm text-muted mb-8">${r}</li>`).join('')}</ul>
+        <ul style="padding-left:16px">${displayRisks.map(r=>`<li class="text-sm text-muted mb-8">${r}</li>`).join('')}</ul>
       </div>
     </div>
+    ${displayPriorities.length ? `<div class="mb-16">
+      <div class="fw-600 mb-8 text-sm">▸ Prioridades de Desenvolvimento</div>
+      <ul style="padding-left:16px">${displayPriorities.map(p=>`<li class="text-sm text-muted mb-8">${p}</li>`).join('')}</ul>
+    </div>` : ''}
     <div class="mb-16">
       <div class="fw-600 mb-8 text-sm">◈ Sabotadores Identificados</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">${profile.saboteurs.map(s=>`<span class="badge badge-yellow">${s}</span>`).join('')}</div>
     </div>
+    ${profile.nonNegotiables ? `<div class="mb-16"><div class="fw-600 mb-8 text-sm">◎ Inegociável</div><p class="text-sm text-muted">${profile.nonNegotiables}</p></div>` : ''}
+    ${profile.legacy ? `<div class="mb-16"><div class="fw-600 mb-8 text-sm">◉ Legado</div><p class="text-sm text-muted">${profile.legacy}</p></div>` : ''}
+    ${profile.growthSignal ? `<div class="mb-16"><div class="fw-600 mb-8 text-sm">▲ Sinal de Crescimento</div><p class="text-sm text-muted">${profile.growthSignal}</p></div>` : ''}
     <div class="advisor-bubble">
       <div class="from">Advisor — Pergunta para você</div>
       <p>Antes do nosso primeiro 1:1, quero deixar uma pergunta: <strong>"O que você ainda não está querendo enxergar sobre sua liderança?"</strong><br><br>Guarde a resposta. Ela vai aparecer nas nossas conversas.</p>
